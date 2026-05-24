@@ -174,13 +174,13 @@ class PipelineLog(Base):
     chat_detail_id = Column(Integer, ForeignKey("chat_details.id", ondelete="CASCADE"), nullable=False)
 
     # Metrik Performa
-    latency_ms = Column(Integer)          # Kecepatan respon AI dalam milidetik
+    latency_ms = Column(Float)          # Kecepatan respon AI dalam milidetik
     status = Column(String(20))           # 'success' atau 'failed'
     error_message = Column(Text, nullable=True)
 
     # Metrik Token (Penting jika pakai OpenAI/LLM berbayar)
-    input_tokens = Column(Integer, default=0)
-    output_tokens = Column(Integer, default=0)
+    input_tokens = Column(Float, default=0)
+    output_tokens = Column(Float, default=0)
     total_cost = Column(Float, default=0.0)  # Opsional: hitung biaya API
 
     # Relationships

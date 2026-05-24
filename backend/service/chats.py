@@ -421,19 +421,6 @@ class ChatService:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def create_topic(db: Session, user_id: int, title: str | None = None) -> Chat:
-        chat = Chat(
-            user_id=user_id,
-            title=title or "Chat Baru",
-            created_at=datetime.utcnow(),
-        )
-        db.add(chat)
-        db.commit()
-        db.refresh(chat)
-        logger.info(f"Topic created → chat_id={chat.id}, user_id={user_id}")
-        return chat
-
-    @staticmethod
     def get_topics(db: Session, user_id: int) -> list[Chat]:
         return (
             db.query(Chat)

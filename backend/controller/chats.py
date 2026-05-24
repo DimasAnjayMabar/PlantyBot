@@ -72,28 +72,6 @@ def _sse_heartbeat() -> str:
 # TOPICS
 # =============================================================================
 
-@router.post("/topics", status_code=status.HTTP_201_CREATED)
-def create_topic(
-    body: CreateTopicSchema,
-    db: Session = Depends(get_db),
-    current_session: UserAuth = Depends(get_current_session),
-):
-    try:
-        chat = ChatService.create_topic(db, current_session.user_id, body.title)
-        return JSONResponse(
-            status_code=status.HTTP_201_CREATED,
-            content={
-                "success": True,
-                "message": "Topik chat berhasil dibuat.",
-                "data":    _serialize_topic(chat),
-            },
-        )
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"POST /topics error → {e}")
-        raise HTTPException(status_code=500, detail="Terjadi kesalahan saat membuat topik.")
-
 @router.get("/topics", status_code=status.HTTP_200_OK)
 def get_topics(
     db: Session = Depends(get_db),

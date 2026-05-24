@@ -1,10 +1,6 @@
 from pydantic import BaseModel, field_validator
 
 
-class CreateTopicSchema(BaseModel):
-    title: str | None = None  # opsional — jika kosong pakai placeholder "Chat Baru"
-
-
 class RenameTitleSchema(BaseModel):
     title: str
 

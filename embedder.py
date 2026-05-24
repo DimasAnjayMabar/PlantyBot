@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """
-Disease Journal PDF Embedder Pipeline
 Graph DB: Neo4j | Vector DB: ChromaDB
 Structure:
   Neo4j  -> Node Jurnal + Node Isi + Relasi HAS_SECTION & NEXT
