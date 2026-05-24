@@ -256,29 +256,6 @@ def _delete_memory_by_chat(chat_id: int) -> None:
         )
 
 
-def _delete_memory_entry(chat_id: int, detail_id: int) -> None:
-    """
-    Hapus satu entry recent dari ChromaDB untuk detail_id tertentu.
-
-    Dipanggil oleh delete_message. Summary tidak disentuh — menghapus
-    satu pesan tidak perlu merecalculate seluruh ringkasan.
-    """
-    try:
-        pipeline   = get_rag_pipeline()
-        collection = pipeline.chroma.client.get_or_create_collection("chat_memory")
-        collection.delete(ids=[f"recent_{chat_id}_{detail_id}"])
-        logger.info(
-            f"[MemoryDelete] Recent entry dihapus → "
-            f"chat_id={chat_id}  detail_id={detail_id}"
-        )
-    except Exception as exc:
-        logger.error(
-            f"[MemoryDelete] Gagal hapus recent entry "
-            f"chat_id={chat_id}  detail_id={detail_id}: {exc}",
-            exc_info=True,
-        )
-
-
 def _save_memory_entry(chat_id: int, detail_id: int, question: str, answer: str) -> None:
     """
     Simpan satu Q&A pair ke ChromaDB 'chat_memory' sebagai entry episodik.

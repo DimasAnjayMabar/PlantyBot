@@ -454,25 +454,6 @@ def regenerate_response(
     except Exception as e:
         logger.error(f"POST /chat/regenerate/{detail_id} error → {e}")
         raise HTTPException(status_code=500, detail="Terjadi kesalahan saat regenerate jawaban.")
-
-
-@router.delete("/chat/message/{detail_id}", status_code=status.HTTP_200_OK)
-def delete_message(
-    detail_id: int,
-    db: Session = Depends(get_db),
-    current_session: UserAuth = Depends(get_current_session),
-):
-    try:
-        ChatService.delete_message(db, current_session.user_id, detail_id)
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"success": True, "message": "Pesan berhasil dihapus."},
-        )
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"DELETE /chat/message/{detail_id} error → {e}")
-        raise HTTPException(status_code=500, detail="Terjadi kesalahan saat menghapus pesan.")
     
 @router.post("/chat/stop/{detail_id}", status_code=status.HTTP_200_OK)
 def stop_generation(

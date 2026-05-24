@@ -511,20 +511,6 @@ class ChatService {
   // Knowledge Upload Methods
   // -------------------------------------------------------------------------
 
-  /// Upload satu PDF — wrapper untuk kompatibilitas internal.
-  Future<Map<String, dynamic>?> uploadPdf({
-    required Uint8List fileBytes,
-    required String fileName,
-    String? judul,
-    String? penulis,
-    String? tahun,
-  }) async {
-    final results = await uploadPdfs(
-      files: [PdfUploadFile(bytes: fileBytes, name: fileName)],
-    );
-    return results.isNotEmpty ? results.first : null;
-  }
-
   /// Upload beberapa PDF sekaligus — satu request per file (backend tetap single).
   /// Mengembalikan list hasil per file dalam urutan yang sama.
   /// [onProgress] dipanggil setiap file selesai: (selesai, total).
