@@ -421,8 +421,8 @@ class _ChatsPageState extends State<ChatsPage>
     Color  color;
     if (failCount == 0) {
       message = successCount == 1
-          ? 'PDF "\${files.first.name}" diterima dan sedang diproses.'
-          : '\$successCount PDF berhasil diterima dan sedang diproses.';
+          ? 'PDF "${files.first.name}" diterima dan sedang diproses.'
+          : '$successCount PDF berhasil diterima dan sedang diproses.';
       color = const Color(0xFF16DB65);
     } else if (successCount == 0) {
       final firstFail = results.firstWhere((r) => r?['success'] != true);
@@ -431,7 +431,7 @@ class _ChatsPageState extends State<ChatsPage>
                 'Gagal mengunggah semua file.';
       color = const Color(0xFFFF4444);
     } else {
-      message = '\$successCount berhasil, \$failCount gagal. Periksa ulang file yang gagal.';
+      message = '$successCount berhasil, $failCount gagal. Periksa ulang file yang gagal.';
       color = const Color(0xFFFFAA00);
     }
 
@@ -636,6 +636,8 @@ class _ChatsPageState extends State<ChatsPage>
           sending: _sending,
           onSend: () => _sendMessage(),
           onUploadPdfs: _uploadPdfs,
+          onSetModel: (mode, {path}) => _chatService.setModel(mode, path: path),
+          onGetModels: () => _chatService.getLocalModels(),
           pendingDetailId: pendingDetailId,
           onStop: pendingDetailId != null
               ? () => _stopGeneration(pendingDetailId)
@@ -2313,6 +2315,8 @@ class _InputBar extends StatefulWidget {
     required this.sending,
     required this.onSend,
     required this.onUploadPdfs,
+    required this.onSetModel,
+    required this.onGetModels,
     this.pendingDetailId,
     this.onStop,
   });
@@ -2322,6 +2326,10 @@ class _InputBar extends StatefulWidget {
   final bool sending;
   final VoidCallback onSend;
   final Future<void> Function(List<PdfUploadFile> files, {void Function(int done, int total)? onProgress}) onUploadPdfs;
+  // Dipanggil saat user menekan Terapkan: mode + path opsional
+  final Future<bool> Function(String mode, {String? path}) onSetModel;
+  // Dipanggil saat dialog dibuka untuk mengambil daftar model lokal
+  final Future<List<Map<String, String>>> Function() onGetModels;
   final int? pendingDetailId;
   final VoidCallback? onStop;
 
@@ -2335,22 +2343,44 @@ class _InputBarState extends State<_InputBar> {
   bool _isListening = false;
   bool _speechEnabled = false;
 
+  String _llmMode = 'groq';
+  String _localModelName = '';
+  bool _modelSwitching = false;
+
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(() {
-      final has = widget.controller.text.trim().isNotEmpty;
-      if (has != _hasText) setState(() => _hasText = has);
-    });
+    widget.controller.addListener(_onTextChanged);  // ← Pisahkan ke method terpisah
     _initSpeech();
   }
+
+  // Method terpisah untuk text change listener
+  void _onTextChanged() {
+    final has = widget.controller.text.trim().isNotEmpty;
+    if (has != _hasText && mounted) {
+      setState(() => _hasText = has);
+    }
+  }
+  
+  @override
+  void dispose() {
+    // 1. Hapus listener dari controller
+    widget.controller.removeListener(_onTextChanged);
+    
+    // 2. Hentikan STT jika sedang mendengarkan
+    _speechToText.stop();
+    
+    // 3. Panggil super dispose (WAJIB)
+    super.dispose();
+  }
+  // ================================================================
 
   void _initSpeech() async {
     try {
       _speechEnabled = await _speechToText.initialize(
         onStatus: (status) {
-          if (status == 'done' || status == 'notListening') {
-            if (mounted) setState(() => _isListening = false);
+          if ((status == 'done' || status == 'notListening') && mounted) {
+            setState(() => _isListening = false);
           }
         },
         onError: (error) {
@@ -2374,14 +2404,337 @@ class _InputBarState extends State<_InputBar> {
           });
         }
       },
-      localeId: 'id_ID', 
+      localeId: 'id_ID',
     );
-    setState(() => _isListening = true);
+    if (mounted) setState(() => _isListening = true);
   }
 
   void _stopListening() async {
     await _speechToText.stop();
-    setState(() => _isListening = false);
+    if (mounted) setState(() => _isListening = false);
+  }
+
+  // ── Model Selector Dialog ─────────────────────────────────────────────────
+
+  Future<void> _showModelDialog(BuildContext context) async {
+    List<Map<String, String>> _localModels = [];
+    bool _loadingModels = true;
+    String? _selectedPath = _llmMode == 'local' ? null : null;
+    String _dialogMode = _llmMode;
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDS) {
+          if (_loadingModels) {
+            Future.microtask(() async {
+              try {
+                final models = await widget.onGetModels();
+                if (ctx.mounted) {
+                  setDS(() {
+                    _localModels = models;
+                    _loadingModels = false;
+                  });
+                }
+              } catch (_) {
+                if (ctx.mounted) setDS(() => _loadingModels = false);
+              }
+            });
+          }
+
+          return Dialog(
+            backgroundColor: const Color(0xFF111111),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFF1A1A1A)),
+            ),
+            child: Container(
+              width: isMobile ? double.infinity : 420,
+              constraints: BoxConstraints(
+                maxWidth: 500,
+                maxHeight: isMobile 
+                    ? MediaQuery.of(ctx).size.height * 0.9  // 90% height di mobile
+                    : 600,
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Header ──────────────────────────────────────────────
+                    Row(
+                      children: [
+                        Container(
+                          width: 36, height: 36,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF16DB65).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.memory_rounded,
+                              color: Color(0xFF16DB65), size: 18),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Pilih Model LLM',
+                            style: GoogleFonts.poppins(
+                              fontSize: isMobile ? 14 : 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.of(ctx).pop(),
+                          child: const Icon(Icons.close_rounded,
+                              color: Color(0xFF666666), size: 20),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Mode "Lokal" memindah embedding & reranker ke CPU',
+                      style: GoogleFonts.poppins(
+                          fontSize: 11, color: const Color(0xFF666666)),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // ── Scrollable content ──────────────────────────────────
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            // Groq API option
+                            _ModelOptionTile(
+                              icon: Icons.cloud_rounded,
+                              title: 'Groq API',
+                              subtitle: 'llama-3.3-70b-versatile · GPU bebas untuk pipeline',
+                              selected: _dialogMode == 'groq',
+                              accentColor: const Color(0xFF16DB65),
+                              onTap: () => setDS(() {
+                                _dialogMode = 'groq';
+                                _selectedPath = null;
+                              }),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Local model section
+                            _ModelOptionTile(
+                              icon: Icons.folder_special_rounded,
+                              title: 'Model Lokal',
+                              subtitle: 'Folder HuggingFace dari folder model/',
+                              selected: _dialogMode == 'local',
+                              accentColor: const Color(0xFFFFAA33),
+                              onTap: () => setDS(() => _dialogMode = 'local'),
+                            ),
+
+                            // Sub-list model lokal
+                            if (_dialogMode == 'local') ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                constraints: BoxConstraints(
+                                  maxHeight: isMobile ? 300 : 250,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0D0D0D),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFF1E1E1E)),
+                                ),
+                                child: _loadingModels
+                                    ? const Center(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(20),
+                                          child: CircularProgressIndicator(
+                                            color: Color(0xFF16DB65), strokeWidth: 2),
+                                        ),
+                                      )
+                                    : _localModels.isEmpty
+                                        ? Padding(
+                                            padding: const EdgeInsets.all(16),
+                                            child: Text(
+                                              'Tidak ada model di folder model/\n'
+                                              'Pastikan folder berisi config.json dan model.safetensors',
+                                              style: GoogleFonts.poppins(
+                                                  fontSize: 12,
+                                                  color: const Color(0xFF666666)),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          )
+                                        : ListView.separated(
+                                            shrinkWrap: true,
+                                            physics: const BouncingScrollPhysics(),
+                                            padding: const EdgeInsets.all(8),
+                                            itemCount: _localModels.length,
+                                            separatorBuilder: (_, __) =>
+                                                const SizedBox(height: 4),
+                                            itemBuilder: (_, i) {
+                                              final m = _localModels[i];
+                                              final isActive = _selectedPath == m['path'];
+                                              return InkWell(
+                                                borderRadius: BorderRadius.circular(8),
+                                                onTap: () => setDS(
+                                                    () => _selectedPath = m['path']),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                      horizontal: 12, vertical: 9),
+                                                  decoration: BoxDecoration(
+                                                    color: isActive
+                                                        ? const Color(0xFFFFAA33)
+                                                            .withOpacity(0.10)
+                                                        : Colors.transparent,
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: isActive
+                                                        ? Border.all(
+                                                            color: const Color(0xFFFFAA33)
+                                                                .withOpacity(0.4))
+                                                        : null,
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.folder_special_rounded,
+                                                        size: 15,
+                                                        color: isActive
+                                                            ? const Color(0xFFFFAA33)
+                                                            : const Color(0xFF666666),
+                                                      ),
+                                                      const SizedBox(width: 10),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              m['name'] ?? '',
+                                                              style: GoogleFonts.poppins(
+                                                                fontSize: 12,
+                                                                color: isActive
+                                                                    ? const Color(0xFFFFAA33)
+                                                                    : Colors.white,
+                                                                fontWeight: isActive
+                                                                    ? FontWeight.w600
+                                                                    : FontWeight.normal,
+                                                              ),
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                            Text(
+                                                              'HuggingFace · transformers',
+                                                              style: GoogleFonts.poppins(
+                                                                  fontSize: 10,
+                                                                  color: const Color(0xFF555555)),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      if (isActive)
+                                                        const Icon(
+                                                            Icons.check_rounded,
+                                                            size: 14,
+                                                            color: Color(0xFFFFAA33)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ── Tombol ──────────────────────────────────────────────
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: Text('Batal',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 13, color: const Color(0xFF888888))),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: (_dialogMode == 'local' &&
+                                    (_selectedPath == null || _selectedPath!.isEmpty))
+                                ? null
+                                : () async {
+                                    Navigator.of(ctx).pop();
+                                    if (mounted) {
+                                      setState(() => _modelSwitching = true);
+                                    }
+                                    try {
+                                      await widget.onSetModel(
+                                        _dialogMode,
+                                        path: _selectedPath,
+                                      );
+                                      if (mounted) {
+                                        setState(() {
+                                          _llmMode = _dialogMode;
+                                          _localModelName = _selectedPath != null
+                                              ? _selectedPath!.split('/').last.split('\\').last
+                                              : '';
+                                          _modelSwitching = false;
+                                        });
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        setState(() => _modelSwitching = false);
+                                      }
+                                      // Show error snackbar
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Gagal mengganti model: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF16DB65),
+                              disabledBackgroundColor: const Color(0xFF1E1E1E),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'Terapkan',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: (_dialogMode == 'local' &&
+                                        (_selectedPath == null || _selectedPath!.isEmpty))
+                                    ? const Color(0xFF555555)
+                                    : Colors.black,
+                              ),
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _showUploadDialog(BuildContext context) {
@@ -2784,8 +3137,69 @@ class _InputBarState extends State<_InputBar> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          
+          const SizedBox(width: 8),
+
+          // ── Tombol Pilih Model LLM ──────────────────────────────────────
+          SizedBox(
+            height: 48,
+            child: Tooltip(
+              message: _llmMode == 'local'
+                  ? 'Model: $_localModelName'
+                  : 'Model: Groq API',
+              child: ElevatedButton(
+                onPressed: _modelSwitching
+                    ? null
+                    : () => _showModelDialog(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _llmMode == 'local'
+                      ? const Color(0xFFFFAA33).withOpacity(0.12)
+                      : const Color(0xFF1A1A1A),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: _llmMode == 'local'
+                          ? const Color(0xFFFFAA33).withOpacity(0.4)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  elevation: 0,
+                ),
+                child: _modelSwitching
+                    ? const SizedBox(
+                        width: 14, height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Color(0xFF16DB65)))
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _llmMode == 'local'
+                                ? Icons.memory_rounded
+                                : Icons.cloud_rounded,
+                            size: 15,
+                            color: _llmMode == 'local'
+                                ? const Color(0xFFFFAA33)
+                                : const Color(0xFF888888),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            _llmMode == 'local' ? 'Lokal' : 'Groq',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: _llmMode == 'local'
+                                  ? const Color(0xFFFFAA33)
+                                  : const Color(0xFF888888),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
           Expanded(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 150),
@@ -2941,6 +3355,101 @@ class _InputBarState extends State<_InputBar> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Model Option Tile — dipakai di dialog pemilihan model
+// ---------------------------------------------------------------------------
+
+class _ModelOptionTile extends StatelessWidget {
+  const _ModelOptionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? accentColor.withOpacity(0.08)
+              : const Color(0xFF151515),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected
+                ? accentColor.withOpacity(0.5)
+                : const Color(0xFF222222),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34, height: 34,
+              decoration: BoxDecoration(
+                color: selected
+                    ? accentColor.withOpacity(0.15)
+                    : const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon,
+                  size: 17,
+                  color: selected ? accentColor : const Color(0xFF666666)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? Colors.white : const Color(0xFFAAAAAA),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        color: const Color(0xFF555555)),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              Container(
+                width: 18, height: 18,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_rounded,
+                    size: 12, color: Colors.black),
+              ),
+          ],
+        ),
       ),
     );
   }

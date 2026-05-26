@@ -3,6 +3,7 @@ import json
 import logging
 import io
 from gtts import gTTS
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, status
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -13,7 +14,6 @@ from middleware.auth import get_current_session
 from models import UserAuth, ChatDetail, Chat
 from service.chats import ChatService, KnowledgeService, _get_or_create_event, _cleanup_event, _signal_stop
 from validation.chats import (
-    CreateTopicSchema,
     RenameTitleSchema,
     SendMessageSchema,
     EditMessageSchema,
@@ -207,7 +207,6 @@ def send_message(
     except Exception as e:
         logger.error(f"POST /chat/send error → {e}")
         raise HTTPException(status_code=500, detail="Terjadi kesalahan saat mengirim pesan.")
-
 
 @router.get("/chat/message/{detail_id}", status_code=status.HTTP_200_OK)
 def get_message(
@@ -565,4 +564,120 @@ async def upload_knowledge_pdf(
         raise HTTPException(
             status_code=500,
             detail="Terjadi kesalahan saat memproses file PDF.",
+        )
+
+# =============================================================================
+# MODEL MANAGEMENT
+# =============================================================================
+
+@router.get("/models", status_code=status.HTTP_200_OK)
+def get_available_models(
+    current_session: UserAuth = Depends(get_current_session),
+):
+    """
+    Ambil daftar model lokal yang tersedia di folder model/.
+    """
+    try:
+        from config import list_local_models
+        models = list_local_models()
+        
+        # Debug logging
+        logger.info(f"Models found: {models}")
+        logger.info(f"Model folder path: {os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'model'))}")
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": True,
+                "message": "Daftar model berhasil diambil.",
+                "models": models,
+            },
+        )
+    except Exception as e:
+        logger.error(f"GET /models error → {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Terjadi kesalahan saat mengambil daftar model: {str(e)}",
+        )
+
+
+@router.post("/models/set-model", status_code=status.HTTP_200_OK)
+async def set_active_model(
+    request: Request,
+    current_session: UserAuth = Depends(get_current_session),
+):
+    """
+    Ganti mode LLM yang digunakan pipeline.
+    
+    Request body:
+      {
+        "mode": "groq" | "local",
+        "path": "/abs/path/to/model"  # wajib jika mode="local"
+      }
+    
+    Mode "groq"  → menggunakan Groq API (llama-3.3-70b-versatile)
+    Mode "local" → menggunakan model HuggingFace dari folder model/
+    
+    Endpoint ini akan:
+      1. Update CONFIG["llm_mode"] dan device placement
+      2. Rebuild seluruh pipeline (RAGModels + RAGPipeline)
+      3. Mengubah placement embedding/reranker/nlp sesuai mode:
+         - groq  → GPU (jika tersedia) untuk embedding/reranker
+         - local → CPU untuk embedding/reranker (GPU untuk LLM lokal)
+    """
+    import json
+    
+    try:
+        body = await request.json()
+        mode = body.get("mode")
+        path = body.get("path")
+        
+        if mode not in ("groq", "local"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Mode harus 'groq' atau 'local'.",
+            )
+        
+        if mode == "local" and not path:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Path model wajib diisi saat mode='local'.",
+            )
+        
+        # Import fungsi reload dari pipeline
+        from pipeline import reload_with_model
+        
+        # Reload pipeline dengan mode baru
+        reload_with_model(mode, path if mode == "local" else None)
+        
+        logger.info(
+            f"Model switched → mode={mode}  "
+            f"path={path if mode == 'local' else 'groq'}  "
+            f"user_id={current_session.user_id}"
+        )
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": True,
+                "message": f"Berhasil beralih ke model {'Groq API' if mode == 'groq' else 'Lokal'}.",
+                "data": {
+                    "mode": mode,
+                    "path": path if mode == "local" else None,
+                },
+            },
+        )
+        
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid JSON body.",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"POST /models/set-model error → {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Gagal mengganti model: {str(e)}",
         )

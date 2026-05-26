@@ -556,6 +556,74 @@ class ChatService {
     return results;
   }
 
+
+  // -------------------------------------------------------------------------
+  // Model Selector Methods
+  // -------------------------------------------------------------------------
+
+  /// Ambil daftar model lokal dari folder model/ di backend.
+  /// Return: list of {"name": "file.gguf", "path": "/abs/path/file.gguf"}
+  /// Ambil daftar model lokal dari backend.
+  /// Setiap entry: {"name", "path", "type"} — type = "folder" | "gguf"
+  // Di service_chats.dart, method getLocalModels()
+  Future<List<Map<String, String>>> getLocalModels() async {
+    try {
+      final res = await _dio.get(
+        '/models',
+        options: Options(headers: _authHeader),
+      );
+      
+      // Debug print
+      print('✅ GET /models response status: ${res.statusCode}');
+      print('✅ GET /models response data: ${res.data}');
+      
+      final list = res.data['models'] as List<dynamic>? ?? [];
+      print('✅ Models list length: ${list.length}');
+      
+      return list
+          .map((e) => {
+                'name': (e['name'] ?? '') as String,
+                'path': (e['path'] ?? '') as String,
+                'type': (e['type'] ?? 'folder') as String,
+              })
+          .toList();
+    } catch (e) {
+      debugPrint('❌ getLocalModels error: $e');
+      if (e is DioException) {
+        debugPrint('❌ Response data: ${e.response?.data}');
+        debugPrint('❌ Response status: ${e.response?.statusCode}');
+      }
+      return [];
+    }
+  }
+
+  /// Ganti mode LLM di backend.
+  /// [mode]  : "groq" atau "local"
+  /// [path]  : path absolut ke file GGUF (wajib saat mode="local")
+  ///
+  /// Backend akan memanggil reload_with_model() → pipeline di-rebuild,
+  /// device placement disesuaikan otomatis.
+  Future<bool> setModel(String mode, {String? path}) async {
+    try {
+      await _dio.post(
+        '/models/set-model',
+        data: {
+          'mode': mode,
+          if (path != null && path.isNotEmpty) 'path': path,
+        },
+        options: Options(
+          headers: _authHeader,
+          // Reload pipeline bisa memakan beberapa detik (load GGUF ke GPU)
+          receiveTimeout: const Duration(seconds: 120),
+        ),
+      );
+      return true;
+    } catch (e) {
+      debugPrint('❌ setModel error: $e');
+      return false;
+    }
+  }
+
   // -------------------------------------------------------------------------
   // SSE Methods
   // -------------------------------------------------------------------------

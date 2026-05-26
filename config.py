@@ -26,10 +26,26 @@ CONFIG = {
     "nlp_id_model":      "indobenchmark/indobert-base-p1",
     # BERT multilingual — digunakan untuk query berbahasa Inggris
     "nlp_en_model":      "dslim/bert-base-NER",
-    "nlp_device":        0 if torch.cuda.is_available() else -1,  # 0=GPU, -1=CPU
 
-    # ── Hardware placement ────────────────────────────────────────────────────
-    # LLM sekarang di Groq API → VRAM bebas penuh untuk embedding & reranker
+    # ── LLM Mode ─────────────────────────────────────────────────────────────
+    # "groq"  → gunakan Groq API (default) — GPU bebas untuk embedding/reranker/nlp
+    # "local" → gunakan model GGUF dari folder ./model/ — GPU hanya untuk LLM lokal
+    #
+    # Nilai ini diubah secara runtime oleh set_llm_mode() di bawah.
+    # JANGAN ubah langsung — gunakan set_llm_mode("groq") atau set_llm_mode("local", path)
+    "llm_mode":          "groq",
+
+    # Path model lokal yang aktif (diisi oleh set_llm_mode saat mode "local")
+    # Contoh: "./model/Llama-3-8B-Agri-Q4_K_M.gguf"
+    "local_llm_path":    None,
+
+    # ── Hardware placement — ditentukan otomatis berdasarkan llm_mode ─────────
+    #
+    # Mode "groq"  → LLM tidak pakai VRAM → embedding/reranker/nlp bisa di GPU
+    # Mode "local" → LLM lokal monopoli GPU → embedding/reranker/nlp dipaksa CPU
+    #
+    # Nilai ini di-recompute oleh _apply_device_config() setiap kali llm_mode berubah.
+    "nlp_device":        0 if torch.cuda.is_available() else -1,
     "embedding_device":  "cuda" if torch.cuda.is_available() else "cpu",
     "reranker_device":   "cuda" if torch.cuda.is_available() else "cpu",
 
@@ -76,6 +92,140 @@ CONFIG = {
     "memory_recent_window":      5,
 }
 
+
+
+
+def _apply_device_config():
+    """
+    Recompute placement CPU/GPU berdasarkan CONFIG["llm_mode"].
+
+    Mode "groq"  → LLM tidak pakai VRAM lokal → embedding/reranker/nlp bisa GPU
+    Mode "local" → LLM lokal monopoli GPU      → embedding/reranker/nlp paksa CPU
+    """
+    has_cuda = torch.cuda.is_available()
+    mode = CONFIG["llm_mode"]
+
+    if mode == "groq":
+        CONFIG["embedding_device"] = "cuda" if has_cuda else "cpu"
+        CONFIG["reranker_device"]  = "cuda" if has_cuda else "cpu"
+        CONFIG["nlp_device"]       = 0 if has_cuda else -1
+    elif mode == "local":
+        CONFIG["embedding_device"] = "cpu"
+        CONFIG["reranker_device"]  = "cpu"
+        CONFIG["nlp_device"]       = -1
+    else:
+        raise ValueError(f"llm_mode tidak dikenal: {mode!r}. Pilih 'groq' atau 'local'.")
+
+
+def set_llm_mode(mode: str, local_llm_path: str = None):
+    """
+    Ganti mode LLM secara runtime.
+
+    Args:
+        mode           : "groq" atau "local"
+        local_llm_path : Path ke file model GGUF (wajib jika mode="local").
+                         Contoh: "./model/Llama-3-8B-Q4_K_M.gguf"
+
+    Caller HARUS memanggil reset_pipeline() setelah ini agar singleton di-reload.
+    """
+    if mode not in ("groq", "local"):
+        raise ValueError(f"mode harus 'groq' atau 'local', bukan {mode!r}")
+    if mode == "local" and not local_llm_path:
+        raise ValueError("local_llm_path wajib diisi saat mode='local'")
+    if mode == "local" and local_llm_path and not os.path.isdir(local_llm_path):
+        raise ValueError(
+            f"local_llm_path harus berupa folder HuggingFace (hasil clone), "
+            f"bukan file tunggal: {local_llm_path!r}"
+        )
+
+    CONFIG["llm_mode"]       = mode
+    CONFIG["local_llm_path"] = local_llm_path if mode == "local" else None
+    _apply_device_config()
+
+
+def list_local_models(model_dir: str = None) -> list:
+    """
+    Scan folder model/ di root project.
+    """
+    if model_dir is None:
+        # Karena config.py ada di backend/config.py
+        # Maka:
+        # - backend_dir = /path/to/backend
+        # - project_root = /path/to/ (root project)
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(backend_dir)
+        
+        # Coba beberapa kemungkinan lokasi folder model
+        possible_paths = [
+            os.path.join(project_root, "model"),           # root/model
+            os.path.join(backend_dir, "model"),            # backend/model
+            os.path.join(project_root, "..", "model"),     # one level above root
+            "./model",                                      # relative current dir
+            "../model",                                     # relative one up
+        ]
+        
+        model_dir = None
+        for path in possible_paths:
+            abs_path = os.path.abspath(path)
+            if os.path.isdir(abs_path):
+                model_dir = abs_path
+                print(f"[INFO] Found model directory at: {model_dir}")
+                break
+        
+        if model_dir is None:
+            print(f"[ERROR] Model directory not found. Tried: {possible_paths}")
+            return []
+    
+    if not os.path.isdir(model_dir):
+        print(f"[ERROR] Model directory does not exist: {model_dir}")
+        return []
+    
+    print(f"[INFO] Scanning models in: {model_dir}")
+    print(f"[INFO] Directory contents: {os.listdir(model_dir)}")
+    
+    models = []
+    for name in sorted(os.listdir(model_dir)):
+        full_path = os.path.join(model_dir, name)
+        
+        # Format 1 — HuggingFace folder
+        if os.path.isdir(full_path):
+            # Cek apakah folder berisi file model
+            try:
+                files = os.listdir(full_path)
+                has_model = any(
+                    f.endswith(('.safetensors', '.bin', '.pt', '.pth')) 
+                    for f in files
+                )
+                has_config = (
+                    'config.json' in files or 
+                    'tokenizer_config.json' in files or
+                    'tokenizer.json' in files
+                )
+                
+                if has_config or has_model:
+                    models.append({
+                        "name": name, 
+                        "path": full_path, 
+                        "type": "folder"
+                    })
+                    print(f"[INFO] Added model folder: {name}")
+                else:
+                    print(f"[WARN] Folder {name} has no model files: {files}")
+                    
+            except Exception as e:
+                print(f"[ERROR] Error reading folder {name}: {e}")
+        
+        # Format 2 — GGUF single file
+        elif name.lower().endswith(".gguf"):
+            models.append({
+                "name": name, 
+                "path": full_path, 
+                "type": "gguf"
+            })
+            print(f"[INFO] Added GGUF file: {name}")
+    
+    print(f"[INFO] Total models found: {len(models)}")
+    return models
 
 # =============================================================================
 # BASE PROMPTS LLM

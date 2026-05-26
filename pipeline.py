@@ -48,6 +48,14 @@ from dataclasses import dataclass
 
 import torch
 from groq import Groq
+# transformers dipakai untuk model lokal HuggingFace (folder hasil clone HF Hub)
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer as AutoTok,
+    TextIteratorStreamer,
+    GenerationConfig,
+    BitsAndBytesConfig,
+)
 from sentence_transformers import SentenceTransformer, CrossEncoder
 import chromadb
 from chromadb.config import Settings
@@ -58,7 +66,7 @@ from transformers import (
     pipeline as hf_pipeline,
 )
 
-from config import CONFIG, PROMPTS
+from config import CONFIG, PROMPTS, set_llm_mode, list_local_models
 
 load_dotenv()
 
@@ -192,15 +200,23 @@ class RAGModels:
 
     def _initialize(self):
         log.info("Memulai pemuatan model RAG...")
-        log.info(
-            "Placement: embedding=%s  reranker=%s  nlp=%s  llm=groq-api(%s)",
-            CONFIG["embedding_device"],
-            CONFIG["reranker_device"],
-            "cuda" if CONFIG["nlp_device"] >= 0 else "cpu",
-            CONFIG["groq_model"],
-        )
 
-        # ── 1. Embedding model → GPU ──────────────────────────────────────────
+        llm_mode = CONFIG.get("llm_mode", "groq")
+        if llm_mode == "local":
+            log.info(
+                "Placement: embedding=cpu  reranker=cpu  nlp=cpu  llm=local(%s)",
+                CONFIG.get("local_llm_path", "?"),
+            )
+        else:
+            log.info(
+                "Placement: embedding=%s  reranker=%s  nlp=%s  llm=groq-api(%s)",
+                CONFIG["embedding_device"],
+                CONFIG["reranker_device"],
+                "cuda" if CONFIG["nlp_device"] >= 0 else "cpu",
+                CONFIG["groq_model"],
+            )
+
+        # ── 1. Embedding model ────────────────────────────────────────────────
         log.info("[1/4] Embedding: %s → %s", CONFIG["embedding_model"], CONFIG["embedding_device"])
         _t = time.perf_counter()
         self.embedding_model = SentenceTransformer(
@@ -223,16 +239,56 @@ class RAGModels:
         )
         log.info("[2/4] Reranker siap  (%.2fs)", time.perf_counter() - _t)
 
-        # ── 3. Groq API client ────────────────────────────────────────────────
-        log.info("[3/4] Groq API client → model=%s", CONFIG["groq_model"])
-        api_key = os.environ.get("GROQ_API_KEY")
-        if not api_key:
-            raise EnvironmentError(
-                "GROQ_API_KEY tidak ditemukan di environment. "
-                "Set environment variable sebelum menjalankan server."
+        # ── 3. LLM — Groq API atau Local GGUF ───────────────────────────────
+        llm_mode = CONFIG.get("llm_mode", "groq")
+        self.llm_mode = llm_mode
+
+        if llm_mode == "local":
+            local_path = CONFIG.get("local_llm_path")
+            if not local_path or not os.path.isdir(local_path):
+                raise FileNotFoundError(
+                    f"Folder model lokal tidak ditemukan: {local_path!r}. "
+                    "Pastikan folder hasil clone HuggingFace ada di folder model/."
+                )
+
+            log.info("[3/4] Local LLM (HuggingFace): %s → GPU", local_path)
+            _t = time.perf_counter()
+
+            # ── Tokenizer ────────────────────────────────────────────────────
+            self.local_tokenizer = AutoTok.from_pretrained(
+                local_path,
+                local_files_only=True,
+                trust_remote_code=True,
             )
-        self.groq_client = Groq(api_key=api_key)
-        log.info("[3/4] Groq client siap.")
+            # Pastikan pad_token ada (beberapa model tidak punya)
+            if self.local_tokenizer.pad_token is None:
+                self.local_tokenizer.pad_token = self.local_tokenizer.eos_token
+
+            # ── Model — load ke GPU dengan bfloat16 ──────────────────────────
+            # bfloat16 hemat VRAM ~2× dibanding float32, akurasi cukup untuk inferensi
+            # device_map="cuda" → semua layer ke GPU (monopoli VRAM untuk LLM lokal)
+            self.local_llm = AutoModelForCausalLM.from_pretrained(
+                local_path,
+                local_files_only=True,
+                trust_remote_code=True,
+                torch_dtype=torch.bfloat16,
+                device_map="cuda" if torch.cuda.is_available() else "cpu",
+            )
+            self.local_llm.eval()
+
+            self.groq_client = None
+            log.info("[3/4] Local LLM siap  (%.2fs)", time.perf_counter() - _t)
+        else:
+            log.info("[3/4] Groq API client → model=%s", CONFIG["groq_model"])
+            api_key = os.environ.get("GROQ_API_KEY")
+            if not api_key:
+                raise EnvironmentError(
+                    "GROQ_API_KEY tidak ditemukan di environment. "
+                    "Set environment variable sebelum menjalankan server."
+                )
+            self.groq_client = Groq(api_key=api_key)
+            self.local_llm = None
+            log.info("[3/4] Groq client siap.")
 
         # ── 4. NLP — IndoBERT (ID) & BERT-NER (EN) ───────────────────────────
         log.info("[4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...")
@@ -1542,23 +1598,43 @@ class RAGPipeline:
         max_new_tokens: int   = None,
     ) -> Generator[str, None, None]:
         """
-        Generate jawaban via Groq API dengan streaming SSE.
+        Generate jawaban — routing otomatis berdasarkan CONFIG["llm_mode"]:
+          - "groq"  → Groq API (streaming SSE)
+          - "local" → LlamaCpp (streaming token-by-token dari GGUF lokal)
 
         Parameter messages adalah list OpenAI-style chat messages:
           [{"role": "system"|"user"|"assistant", "content": "..."}]
 
         stop_event.set() dari luar → hentikan iterasi streaming lebih awal.
         temperature, top_p, max_new_tokens — jika None, pakai CONFIG default.
-
-        Dipakai oleh semua jalur: knowledge dan social.
         """
         _temperature    = temperature    if temperature    is not None else CONFIG["temperature"]
         _top_p          = top_p          if top_p          is not None else CONFIG["top_p"]
         _max_new_tokens = max_new_tokens if max_new_tokens is not None else CONFIG["max_new_tokens"]
 
+        llm_mode = self.models.llm_mode
+
+        if llm_mode == "local":
+            yield from self._generate_stream_local(
+                messages, stop_event, _temperature, _top_p, _max_new_tokens
+            )
+        else:
+            yield from self._generate_stream_groq(
+                messages, stop_event, _temperature, _top_p, _max_new_tokens
+            )
+
+    def _generate_stream_groq(
+        self,
+        messages:       List[Dict],
+        stop_event:     threading.Event,
+        temperature:    float,
+        top_p:          float,
+        max_new_tokens: int,
+    ) -> Generator[str, None, None]:
+        """Generate via Groq API dengan streaming SSE."""
         log.info(
             "[Groq] Generate — model=%s  max_tokens=%d  temperature=%.2f  top_p=%.2f",
-            CONFIG["groq_model"], _max_new_tokens, _temperature, _top_p,
+            CONFIG["groq_model"], max_new_tokens, temperature, top_p,
         )
         gen_start   = time.perf_counter()
         token_count = 0
@@ -1567,14 +1643,13 @@ class RAGPipeline:
             stream = self.models.groq_client.chat.completions.create(
                 model=CONFIG["groq_model"],
                 messages=messages,
-                max_tokens=_max_new_tokens,
-                temperature=_temperature,
-                top_p=_top_p,
+                max_tokens=max_new_tokens,
+                temperature=temperature,
+                top_p=top_p,
                 stream=True,
             )
 
             for chunk in stream:
-                # Cek stop_event setiap chunk
                 if stop_event is not None and stop_event.is_set():
                     log.info("[Groq] Stop event pada token %d", token_count)
                     break
@@ -1592,10 +1667,106 @@ class RAGPipeline:
             raise
         finally:
             elapsed = time.perf_counter() - gen_start
-            log.info(
-                "[Groq] ✓ Selesai — %d chunk  %.3fs",
-                token_count, elapsed,
+            log.info("[Groq] ✓ Selesai — %d chunk  %.3fs", token_count, elapsed)
+
+    def _generate_stream_local(
+        self,
+        messages:       List[Dict],
+        stop_event:     threading.Event,
+        temperature:    float,
+        top_p:          float,
+        max_new_tokens: int,
+    ) -> Generator[str, None, None]:
+        """
+        Generate via HuggingFace AutoModelForCausalLM (folder clone dari HF Hub).
+
+        Menggunakan TextIteratorStreamer agar token bisa di-yield satu per satu
+        ke SSE tanpa menunggu seluruh respons selesai.
+
+        Alur:
+          1. Format messages → apply_chat_template (pakai template bawaan model)
+          2. Tokenisasi → tensor GPU
+          3. model.generate() dijalankan di thread terpisah (agar tidak blocking)
+          4. TextIteratorStreamer di-iterate di thread utama → yield token
+          5. stop_event.set() → hentikan iteration lebih awal
+
+        GPU dimonopoli oleh LLM lokal — embedding/reranker/nlp sudah di CPU.
+        """
+        model_name = os.path.basename(CONFIG.get("local_llm_path", "local"))
+        log.info(
+            "[LocalLLM] Generate — model=%s  max_tokens=%d  temperature=%.2f  top_p=%.2f",
+            model_name, max_new_tokens, temperature, top_p,
+        )
+        gen_start   = time.perf_counter()
+        token_count = 0
+        tokenizer   = self.models.local_tokenizer
+        model       = self.models.local_llm
+
+        try:
+            # ── 1. Format prompt via chat template ───────────────────────────
+            # apply_chat_template mengubah list messages ke string prompt
+            # yang sesuai dengan format training model (Mistral, Qwen, dll)
+            try:
+                encoding = tokenizer.apply_chat_template(
+                    messages,
+                    add_generation_prompt=True,
+                    return_tensors="pt",
+                )
+                input_ids = encoding.input_ids.to(model.device)
+            except Exception:
+                # Fallback: model tidak punya chat template → concat manual
+                log.warning("[LocalLLM] Chat template tidak tersedia, gunakan fallback")
+                raw = "".join(
+                    f"{m['role'].upper()}: {m['content']}" for m in messages
+                ) + "ASSISTANT:"
+                prompt_ids = tokenizer(raw, return_tensors="pt").input_ids.to(model.device)
+
+            # ── 2. Streamer setup ─────────────────────────────────────────────
+            streamer = TextIteratorStreamer(
+                tokenizer,
+                skip_prompt=True,        # jangan re-yield token prompt
+                skip_special_tokens=True,
             )
+
+            # ── 3. Generation config ─────────────────────────────────────────
+            gen_kwargs = dict(
+                input_ids=input_ids,
+                streamer=streamer,
+                max_new_tokens=max_new_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                do_sample=temperature > 0,
+                pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+            )
+
+            # ── 4. Generate di background thread ─────────────────────────────
+            gen_thread = threading.Thread(
+                target=model.generate,
+                kwargs=gen_kwargs,
+                daemon=True,
+            )
+            gen_thread.start()
+
+            # ── 5. Iterate streamer — yield token ke SSE ──────────────────────
+            for text in streamer:
+                if stop_event is not None and stop_event.is_set():
+                    log.info("[LocalLLM] Stop event pada token %d", token_count)
+                    break
+                if text:
+                    token_count += 1
+                    yield text
+
+            gen_thread.join(timeout=5)
+
+        except GeneratorExit:
+            log.info("[LocalLLM] GeneratorExit pada token %d", token_count)
+        except Exception:
+            log.exception("[LocalLLM] Error saat streaming")
+            raise
+        finally:
+            elapsed = time.perf_counter() - gen_start
+            log.info("[LocalLLM] ✓ Selesai — %d token  %.3fs", token_count, elapsed)
 
     # ── Utility ───────────────────────────────────────────────────────────────
 
@@ -1652,3 +1823,49 @@ def reset_pipeline() -> None:
         _rag_pipeline = None
     RAGModels.reset()
     _rag_pipeline = RAGPipeline()
+
+
+def reload_with_model(mode: str, local_llm_path: str = None) -> None:
+    """
+    Ganti mode LLM dan rebuild seluruh pipeline dalam satu panggilan.
+
+    Dipanggil dari endpoint API (misalnya POST /api/set-model) ketika
+    pengguna memilih model baru dari UI.
+
+    Args:
+        mode           : "groq" atau "local"
+        local_llm_path : Path absolut/relatif ke file GGUF (wajib jika mode="local")
+
+    Efek:
+      1. CONFIG["llm_mode"] dan device placement di-update via set_llm_mode()
+      2. Singleton RAGModels + RAGPipeline di-destroy dan di-rebuild
+      3. Jika mode="local" → embedding/reranker/nlp otomatis pindah ke CPU
+         Jika mode="groq"  → embedding/reranker/nlp kembali ke GPU (jika ada)
+
+    Contoh penggunaan di app.py / Flask route:
+        from pipeline import reload_with_model, list_local_models
+
+        @app.route("/api/set-model", methods=["POST"])
+        def api_set_model():
+            data = request.get_json()
+            reload_with_model(data["mode"], data.get("path"))
+            return {"status": "ok", "mode": data["mode"]}
+
+        @app.route("/api/models", methods=["GET"])
+        def api_models():
+            return {"models": list_local_models()}
+    """
+    log.info(
+        "reload_with_model() → mode=%r  path=%r",
+        mode, local_llm_path,
+    )
+    set_llm_mode(mode, local_llm_path)  # update CONFIG + device placement
+    reset_pipeline()                     # rebuild RAGModels + RAGPipeline
+    log.info(
+        "reload_with_model() selesai — "
+        "embedding=%s  reranker=%s  nlp=%s  llm=%s",
+        CONFIG["embedding_device"],
+        CONFIG["reranker_device"],
+        "cuda" if CONFIG["nlp_device"] >= 0 else "cpu",
+        CONFIG.get("local_llm_path") or CONFIG["groq_model"],
+    )
