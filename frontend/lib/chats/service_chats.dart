@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:frontend/services/token_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 
@@ -22,16 +22,16 @@ final _dio = Dio(
   ),
 );
 
-final _storage = FlutterSecureStorage(
-  aOptions: const AndroidOptions(encryptedSharedPreferences: true),
-  webOptions: const WebOptions(
-    dbName: 'agribot_secure',
-    publicKey: 'agribot_key',
-  ),
-);
-
 const _kBaseUrl = 'http://localhost:8000';
 const _kTokenRefreshInterval = Duration(minutes: 25);
+
+// ---------------------------------------------------------------------------
+// Token Storage — Abstraction Layer
+//
+// Web/Chrome  → SharedPreferences (localStorage) — persisten lintas restart browser
+// Android     → FlutterSecureStorage (EncryptedSharedPreferences) — enkripsi AES-256
+//               kunci disimpan di Android Keystore (hardware-backed)
+// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Models
@@ -242,10 +242,13 @@ class ChatService {
   // Auth Methods
   // -------------------------------------------------------------------------
 
+  /// Inisialisasi auth saat app pertama kali dibuka.
+  /// Membaca token dari storage (localStorage di web, EncryptedSharedPrefs di Android).
+  /// Return true jika token ditemukan dan valid — langsung masuk ke home.
   Future<bool> initAuth() async {
     try {
-      _accessToken = await _storage.read(key: 'access_token');
-      final uid = await _storage.read(key: 'user_id');
+      _accessToken = await TokenStorage.read(key: 'access_token');
+      final uid = await TokenStorage.read(key: 'user_id');
       _userId = uid != null ? int.tryParse(uid) : null;
     } catch (_) {}
 
@@ -256,35 +259,103 @@ class ChatService {
     return true;
   }
 
+  /// Simpan token setelah login berhasil.
+  /// Dipanggil dari auth service / login handler setelah response login diterima.
+  Future<void> saveAuthData({
+    required String accessToken,
+    required String refreshToken,
+    required int userId,
+  }) async {
+    await Future.wait([
+      TokenStorage.write(key: 'access_token', value: accessToken),
+      TokenStorage.write(key: 'refresh_token', value: refreshToken),
+      TokenStorage.write(key: 'user_id', value: userId.toString()),
+      TokenStorage.write(
+        key: 'session_created_at',
+        value: DateTime.now().toIso8601String(),
+      ),
+    ]);
+    _accessToken = accessToken;
+    _userId = userId;
+    _startTokenTimer();
+  }
+
+  // Di dalam class ChatService, update method _startTokenTimer dan _silentRefresh
   void _startTokenTimer() {
     _tokenTimer?.cancel();
+    print('🔄 Starting token refresh timer with interval: ${_kTokenRefreshInterval.inMinutes} minutes');
     _tokenTimer = Timer.periodic(_kTokenRefreshInterval, (_) => _silentRefresh());
   }
 
+  /// Silent refresh token setiap interval.
+  /// Membaca refresh_token dari storage, kirim ke backend, simpan token baru.
+  /// Jika refresh_token tidak ada atau expired → force logout.
   Future<void> _silentRefresh() async {
-    final rt = await _storage.read(key: 'refresh_token');
+    print('🔄 [${DateTime.now()}] Running silent refresh...');
+    
+    final rt = await TokenStorage.read(key: 'refresh_token');
     if (rt == null || rt.isEmpty) {
+      print('❌ [${DateTime.now()}] No refresh token found, forcing logout');
       _forceLogout();
       return;
     }
+    
+    print('📝 [${DateTime.now()}] Refresh token found, attempting to refresh...');
+    
     try {
-      final res = await _dio.post('/users/refresh-token', data: {'refresh_token': rt});
+      final res = await _dio.post('/users/refresh-token', 
+        data: {'refresh_token': rt},
+        options: Options(
+          headers: _authHeader,
+          validateStatus: (status) => status! < 500, // Accept 401/403 for handling
+        ),
+      );
+      
       if (res.statusCode == 200) {
         final d = res.data['data'] as Map<String, dynamic>;
+        final newAccessToken = d['access_token'] as String;
+        final newRefreshToken = d['refresh_token'] as String;
+        
         await Future.wait([
-          _storage.write(key: 'access_token', value: d['access_token'] as String),
-          _storage.write(key: 'refresh_token', value: d['refresh_token'] as String),
+          TokenStorage.write(key: 'access_token', value: newAccessToken),
+          TokenStorage.write(key: 'refresh_token', value: newRefreshToken),
         ]);
-        _accessToken = d['access_token'] as String;
+        
+        _accessToken = newAccessToken;
         onTokenUpdated?.call(_accessToken);
+        
+        print('✅ [${DateTime.now()}] Token refreshed successfully!');
+        print('   New access token: ${newAccessToken.substring(0, 20)}...');
+        print('   New refresh token: ${newRefreshToken.substring(0, 20)}...');
+      } else {
+        print('❌ [${DateTime.now()}] Refresh failed with status: ${res.statusCode}');
+        print('   Response: ${res.data}');
+        
+        if (res.statusCode == 401 || res.statusCode == 403) {
+          print('⚠️ Token expired or invalid, forcing logout');
+          _forceLogout();
+        }
       }
     } on DioException catch (e) {
+      print('❌ [${DateTime.now()}] DioException during refresh:');
+      print('   Type: ${e.type}');
+      print('   Message: ${e.message}');
+      if (e.response != null) {
+        print('   Status: ${e.response?.statusCode}');
+        print('   Data: ${e.response?.data}');
+      }
+      
       if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        print('⚠️ Token expired or invalid, forcing logout');
         _forceLogout();
       }
-    } catch (_) {}
+    } catch (e) {
+      print('❌ [${DateTime.now()}] Unexpected error during refresh: $e');
+    }
   }
 
+  /// Force logout tanpa memanggil API — hanya bersihkan state lokal.
+  /// Dipanggil saat token expired atau refresh gagal.
   void _forceLogout() {
     _tokenTimer?.cancel();
     _accessToken = null;
@@ -294,20 +365,18 @@ class ChatService {
     onForceLogout?.call();
   }
 
+  /// Force logout + hapus semua data dari storage.
+  /// Dipanggil saat ada error auth yang tidak bisa di-recover.
   Future<void> forceLogout() async {
     _tokenTimer?.cancel();
-    await Future.wait([
-      _storage.delete(key: 'access_token'),
-      _storage.delete(key: 'refresh_token'),
-      _storage.delete(key: 'user_id'),
-      _storage.delete(key: 'session_created_at'),
-    ]);
+    await TokenStorage.deleteAll();
     _accessToken = null;
     _userId = null;
     await _audioPlayer.stop();
     playingTtsId.value = null;
   }
 
+  /// Logout normal — panggil API logout dulu, lalu bersihkan storage.
   Future<void> logout() async {
     try {
       await _dio.post('/users/logout', options: Options(headers: _authHeader));
@@ -471,13 +540,13 @@ class ChatService {
     try {
       await _audioPlayer.stop();
       playingTtsId.value = detailId;
-      _currentTtsRequestDetailId = detailId; // Cegah balapan kondisi jika ditekan stop saat loading
+      _currentTtsRequestDetailId = detailId;
 
       final response = await _dio.get(
         '/chat/message/$detailId/tts',
         options: Options(
           headers: _authHeader,
-          responseType: ResponseType.bytes, 
+          responseType: ResponseType.bytes,
         ),
       );
 
@@ -556,70 +625,43 @@ class ChatService {
     return results;
   }
 
-
   // -------------------------------------------------------------------------
   // Model Selector Methods
   // -------------------------------------------------------------------------
 
-  /// Ambil daftar model lokal dari folder model/ di backend.
-  /// Return: list of {"name": "file.gguf", "path": "/abs/path/file.gguf"}
   /// Ambil daftar model lokal dari backend.
   /// Setiap entry: {"name", "path", "type"} — type = "folder" | "gguf"
-  // Di service_chats.dart, method getLocalModels()
-  Future<List<Map<String, String>>> getLocalModels() async {
+  Future<List<Map<String, dynamic>>> getLocalModels() async {
     try {
-      final res = await _dio.get(
-        '/models',
-        options: Options(headers: _authHeader),
-      );
-      
-      // Debug print
-      print('✅ GET /models response status: ${res.statusCode}');
-      print('✅ GET /models response data: ${res.data}');
-      
-      final list = res.data['models'] as List<dynamic>? ?? [];
-      print('✅ Models list length: ${list.length}');
-      
-      return list
-          .map((e) => {
-                'name': (e['name'] ?? '') as String,
-                'path': (e['path'] ?? '') as String,
-                'type': (e['type'] ?? 'folder') as String,
-              })
-          .toList();
-    } catch (e) {
-      debugPrint('❌ getLocalModels error: $e');
-      if (e is DioException) {
-        debugPrint('❌ Response data: ${e.response?.data}');
-        debugPrint('❌ Response status: ${e.response?.statusCode}');
+      final resp = await _dio.get('/models', options: Options(headers: _authHeader));
+      final data = resp.data;
+      if (data['success'] == true) {
+        return List<Map<String, dynamic>>.from(
+          (data['models'] as List).map((m) => Map<String, dynamic>.from(m)),
+        );
       }
+      return [];
+    } catch (_) {
       return [];
     }
   }
 
   /// Ganti mode LLM di backend.
   /// [mode]  : "groq" atau "local"
-  /// [path]  : path absolut ke file GGUF (wajib saat mode="local")
+  /// [path]  : path absolut ke folder model atau file GGUF (wajib saat mode="local")
   ///
   /// Backend akan memanggil reload_with_model() → pipeline di-rebuild,
   /// device placement disesuaikan otomatis.
+  
   Future<bool> setModel(String mode, {String? path}) async {
     try {
-      await _dio.post(
+      final resp = await _dio.post(
         '/models/set-model',
-        data: {
-          'mode': mode,
-          if (path != null && path.isNotEmpty) 'path': path,
-        },
-        options: Options(
-          headers: _authHeader,
-          // Reload pipeline bisa memakan beberapa detik (load GGUF ke GPU)
-          receiveTimeout: const Duration(seconds: 120),
-        ),
+        data: {'model_id': path},
+        options: Options(headers: _authHeader)
       );
-      return true;
-    } catch (e) {
-      debugPrint('❌ setModel error: $e');
+      return resp.data['success'] == true;
+    } catch (_) {
       return false;
     }
   }
@@ -655,6 +697,7 @@ class SseTracker {
     sseSub = null;
   }
 }
+
 // ---------------------------------------------------------------------------
 // Model untuk Multi-file Upload
 // ---------------------------------------------------------------------------

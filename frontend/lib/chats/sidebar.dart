@@ -98,10 +98,112 @@ class ChatSidebar extends StatelessWidget {
           // ── Logout ────────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-            child: _LogoutButton(onPressed: onLogout),
+            child: _LogoutButton(onPressed: () => _showLogoutConfirmDialog(context, onLogout)),
           ),
         ],
       ),
+    );
+  }
+
+  void _showLogoutConfirmDialog(BuildContext context, VoidCallback onLogout) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: kChatSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: kChatBorder),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF4D4D).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.logout_rounded,
+                    size: 32,
+                    color: Color(0xFFFF4D4D),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Konfirmasi Keluar',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Apakah Anda yakin ingin keluar dari aplikasi?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: kChatTextMuted,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: kChatBorder),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        child: Text(
+                          'Batal',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: kChatTextMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          onLogout();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF4D4D),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        child: Text(
+                          'Keluar',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -219,11 +321,122 @@ class _TopicList extends StatelessWidget {
           isRenaming     : t.id == renamingId,
           renamingTemp   : renamingTemp,
           onTap          : () => onSelect(t),
-          onDelete       : () => onDelete(t),
+          onDelete       : () => _showDeleteConfirmDialog(context, t, onDelete),
           onStartRename  : () => onStartRename(t),
           onConfirmRename: (v) => onConfirmRename(t, v),
           onCancelRename : onCancelRename,
           onRenameChange : onRenameChange,
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmDialog(BuildContext context, ChatTopic topic, void Function(ChatTopic) onDelete) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: kChatSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: kChatBorder),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF4D4D).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    size: 32,
+                    color: Color(0xFFFF4D4D),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Hapus Percakapan',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Apakah Anda yakin ingin menghapus "${topic.title}"?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: kChatTextMuted,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Percakapan ini akan dihapus secara permanen.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: kChatTextMuted,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: kChatBorder),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        child: Text(
+                          'Batal',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: kChatTextMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          onDelete(topic);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF4D4D),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        child: Text(
+                          'Hapus',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -344,21 +557,62 @@ class _TopicTileState extends State<_TopicTile> {
                 ),
               ),
             ),
-            if (_hovering || widget.isActive) ...[
-              const SizedBox(width: 4),
-              _TileAction(
-                icon   : Icons.drive_file_rename_outline_rounded,
-                onTap  : widget.onStartRename,
-                tooltip: 'Ganti nama',
+            // Always show 3 dots menu button
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 16, color: kChatTextMuted),
+              tooltip: "",
+              offset: const Offset(0, 20),
+              color: kChatSurfaceAlt,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: kChatBorder),
               ),
-              const SizedBox(width: 2),
-              _TileAction(
-                icon   : Icons.delete_outline_rounded,
-                onTap  : widget.onDelete,
-                tooltip: 'Hapus',
-                color  : const Color(0xFFFF4D4D),
-              ),
-            ],
+              onSelected: (value) {
+                if (value == 'rename') {
+                  widget.onStartRename();
+                } else if (value == 'delete') {
+                  widget.onDelete();
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  value: 'rename',
+                  height: 36,
+                  child: Row(
+                    children: [
+                      Icon(Icons.drive_file_rename_outline_rounded, 
+                           size: 16, color: kChatNeon),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Ganti nama',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'delete',
+                  height: 36,
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline_rounded, 
+                           size: 16, color: const Color(0xFFFF4D4D)),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Hapus',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -401,39 +655,6 @@ class _TopicTileState extends State<_TopicTile> {
                 size: 16, color: kChatTextMuted),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Tile Action Button
-// ---------------------------------------------------------------------------
-
-class _TileAction extends StatelessWidget {
-  const _TileAction({
-    required this.icon,
-    required this.onTap,
-    required this.tooltip,
-    this.color = kChatTextMuted,
-  });
-
-  final IconData     icon;
-  final VoidCallback onTap;
-  final String       tooltip;
-  final Color        color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Padding(
-          padding: const EdgeInsets.all(3),
-          child: Icon(icon, size: 15, color: color),
-        ),
       ),
     );
   }

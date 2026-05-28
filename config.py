@@ -1,14 +1,3 @@
-"""
-config.py — Konfigurasi Pipeline & Base Prompt LLM
-====================================================
-File ini berisi:
-  1. CONFIG  → semua parameter teknis pipeline (model, DB, retrieval, generation)
-  2. PROMPTS → semua base prompt yang digunakan LLM (knowledge, social, memory)
-
-Import di pipeline.py:
-  from config import CONFIG, PROMPTS
-"""
-
 import os
 import torch
 
@@ -22,29 +11,12 @@ CONFIG = {
     "reranker_model":    "BAAI/bge-reranker-v2-m3",
 
     # ── NLP Models (NER / token classification) ───────────────────────────────
-    # IndoBERT — digunakan untuk query berbahasa Indonesia
     "nlp_id_model":      "indobenchmark/indobert-base-p1",
-    # BERT multilingual — digunakan untuk query berbahasa Inggris
     "nlp_en_model":      "dslim/bert-base-NER",
 
     # ── LLM Mode ─────────────────────────────────────────────────────────────
-    # "groq"  → gunakan Groq API (default) — GPU bebas untuk embedding/reranker/nlp
-    # "local" → gunakan model GGUF dari folder ./model/ — GPU hanya untuk LLM lokal
-    #
-    # Nilai ini diubah secara runtime oleh set_llm_mode() di bawah.
-    # JANGAN ubah langsung — gunakan set_llm_mode("groq") atau set_llm_mode("local", path)
     "llm_mode":          "groq",
-
-    # Path model lokal yang aktif (diisi oleh set_llm_mode saat mode "local")
-    # Contoh: "./model/Llama-3-8B-Agri-Q4_K_M.gguf"
     "local_llm_path":    None,
-
-    # ── Hardware placement — ditentukan otomatis berdasarkan llm_mode ─────────
-    #
-    # Mode "groq"  → LLM tidak pakai VRAM → embedding/reranker/nlp bisa di GPU
-    # Mode "local" → LLM lokal monopoli GPU → embedding/reranker/nlp dipaksa CPU
-    #
-    # Nilai ini di-recompute oleh _apply_device_config() setiap kali llm_mode berubah.
     "nlp_device":        0 if torch.cuda.is_available() else -1,
     "embedding_device":  "cuda" if torch.cuda.is_available() else "cpu",
     "reranker_device":   "cuda" if torch.cuda.is_available() else "cpu",
@@ -57,9 +29,6 @@ CONFIG = {
     "chroma_path":       os.path.join(os.path.dirname(os.path.abspath(__file__)), "chroma_db"),
     "chroma_collection": "konten_isi",
     "memory_collection": "chat_memory",
-    # Collection khusus untuk menyimpan identitas user (nama, preferensi, dll.)
-    # Terpisah dari chat_memory agar tidak ikut terhapus saat topic dihapus.
-    # Key: 'identity_{user_id}'
     "identity_collection": "user_identity",
 
     # ── Neo4j ─────────────────────────────────────────────────────────────────
@@ -68,185 +37,142 @@ CONFIG = {
     "neo4j_password":    "password",
 
     # ── Pipeline parameters ───────────────────────────────────────────────────
-    "chroma_retrieval_k":    20,   # kandidat dari ChromaDB (Tahap 1)
+    "chroma_retrieval_k":    12,   # kandidat dari ChromaDB (Tahap 1)
     "context_window":        1,    # window ±N chunk di Neo4j (Tahap 2)
-    "reranked_k":            10,   # kandidat setelah reranking (Tahap 3)
-    "max_chunks_per_jurnal": 5,    # maks chunk per jurnal di konteks akhir (Tahap 4)
-    "final_context_k":       5,    # chunk yang masuk ke prompt LLM (Tahap 4)
+    "reranked_k":            6,   # kandidat setelah reranking (Tahap 3)
+    "max_chunks_per_jurnal": 3,    # maks chunk per jurnal di konteks akhir (Tahap 4)
+    "final_context_k":       3,    # chunk yang masuk ke prompt LLM (Tahap 4)
 
     # ── LLM generation — Knowledge pipeline ──────────────────────────────────
-    "max_new_tokens":    2048,
+    "max_new_tokens":    1024,
     "temperature":       0.2,
     "top_p":             0.95,
     "context_max_chars": 24_000,   # ~6000 token × 4 char/token
 
     # ── LLM generation — Social pipeline ─────────────────────────────────────
-    "social_max_new_tokens": 1024,
+    "social_max_new_tokens": 256,
     "social_temperature":    0.5,
     "social_top_p":          0.95,
 
     # ── Memory — Running Summary + Recent Window ──────────────────────────────
-    "memory_summary_max_words":  250,
-    "memory_summary_model":      "llama-3.3-70b-versatile",
-    "memory_summary_max_tokens": 500,
+    "memory_summary_max_words":  500,
+    "memory_summary_model":      "openai/gpt-oss-120b",
+    "memory_summary_max_tokens": 512,
     "memory_recent_window":      5,
 }
 
-
-
-
 def _apply_device_config():
-    """
-    Recompute placement CPU/GPU berdasarkan CONFIG["llm_mode"].
-
-    Mode "groq"  → LLM tidak pakai VRAM lokal → embedding/reranker/nlp bisa GPU
-    Mode "local" → LLM lokal monopoli GPU      → embedding/reranker/nlp paksa CPU
-    """
     has_cuda = torch.cuda.is_available()
-    mode = CONFIG["llm_mode"]
+    CONFIG["embedding_device"] = "cuda" if has_cuda else "cpu"
+    CONFIG["reranker_device"]  = "cuda" if has_cuda else "cpu"
+    CONFIG["nlp_device"]       = 0 if has_cuda else -1
 
-    if mode == "groq":
-        CONFIG["embedding_device"] = "cuda" if has_cuda else "cpu"
-        CONFIG["reranker_device"]  = "cuda" if has_cuda else "cpu"
-        CONFIG["nlp_device"]       = 0 if has_cuda else -1
-    elif mode == "local":
-        CONFIG["embedding_device"] = "cpu"
-        CONFIG["reranker_device"]  = "cpu"
-        CONFIG["nlp_device"]       = -1
-    else:
-        raise ValueError(f"llm_mode tidak dikenal: {mode!r}. Pilih 'groq' atau 'local'.")
+GROQ_ALLOWED_MODELS = {
+    "llama-3.1-8b-instant",
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3-32b",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+}
 
+GROQ_MODEL_TPM_LIMITS = {
+    "llama-3.1-8b-instant":                        6_000,
+    "meta-llama/llama-4-scout-17b-16e-instruct":   6_000,
+    "openai/gpt-oss-20b":                          6_000,
+    "qwen/qwen3-32b":                              6_000,
+    "llama-3.3-70b-versatile":                     300_000,
+    "openai/gpt-oss-120b":                         6_000,   # ← tambah; sesuaikan jika berbeda
+}
+
+GROQ_MODEL_SAFE_TOKEN_BUDGET = {
+    k: int(v * 0.8) for k, v in GROQ_MODEL_TPM_LIMITS.items()
+}
+
+FIXED_OVERHEAD_TOKENS = 1_000
 
 def set_llm_mode(mode: str, local_llm_path: str = None):
-    """
-    Ganti mode LLM secara runtime.
-
-    Args:
-        mode           : "groq" atau "local"
-        local_llm_path : Path ke file model GGUF (wajib jika mode="local").
-                         Contoh: "./model/Llama-3-8B-Q4_K_M.gguf"
-
-    Caller HARUS memanggil reset_pipeline() setelah ini agar singleton di-reload.
-    """
-    if mode not in ("groq", "local"):
-        raise ValueError(f"mode harus 'groq' atau 'local', bukan {mode!r}")
-    if mode == "local" and not local_llm_path:
-        raise ValueError("local_llm_path wajib diisi saat mode='local'")
-    if mode == "local" and local_llm_path and not os.path.isdir(local_llm_path):
+    if mode != "groq":
         raise ValueError(
-            f"local_llm_path harus berupa folder HuggingFace (hasil clone), "
-            f"bukan file tunggal: {local_llm_path!r}"
+            "Mode 'local' dinonaktifkan. "
+            "Hanya mode 'groq' yang didukung saat ini. "
+            "Untuk mengganti model Groq, gunakan set_groq_model(model_id)."
         )
-
-    CONFIG["llm_mode"]       = mode
-    CONFIG["local_llm_path"] = local_llm_path if mode == "local" else None
+    CONFIG["llm_mode"]       = "groq"
+    CONFIG["local_llm_path"] = None
     _apply_device_config()
 
+def _apply_token_budget(safe_token_budget: int) -> None:
+    usable = safe_token_budget - FIXED_OVERHEAD_TOKENS
+
+    max_out       = min(int(usable * 0.25), 2048)
+    max_ctx_chars = min(int(usable * 0.30 * 4), 24_000)
+    max_summary   = min(int(usable * 0.10), 500)
+
+    CONFIG["max_new_tokens"]            = max_out
+    CONFIG["social_max_new_tokens"]     = max_out
+    CONFIG["context_max_chars"]         = max_ctx_chars
+    CONFIG["memory_summary_max_tokens"] = max_summary
+
+def set_groq_model(model_id: str) -> None:
+    if model_id not in GROQ_ALLOWED_MODELS:
+        raise ValueError(
+            f"Model '{model_id}' tidak dikenali. "
+            f"Pilihan: {', '.join(sorted(GROQ_ALLOWED_MODELS))}"
+        )
+
+    CONFIG["groq_model"]           = model_id
+    CONFIG["memory_summary_model"] = CONFIG["memory_summary_model"]
+    CONFIG["llm_mode"]             = "groq"
+    CONFIG["local_llm_path"]       = None
+    _apply_device_config()
+
+    # Sesuaikan token budget berdasarkan limit model yang dipilih
+    safe_budget = GROQ_MODEL_SAFE_TOKEN_BUDGET.get(model_id, 4_800)
+    _apply_token_budget(safe_budget)
 
 def list_local_models(model_dir: str = None) -> list:
-    """
-    Scan folder model/ di root project.
-    """
-    if model_dir is None:
-        # Karena config.py ada di backend/config.py
-        # Maka:
-        # - backend_dir = /path/to/backend
-        # - project_root = /path/to/ (root project)
-        backend_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(backend_dir)
-        
-        # Coba beberapa kemungkinan lokasi folder model
-        possible_paths = [
-            os.path.join(project_root, "model"),           # root/model
-            os.path.join(backend_dir, "model"),            # backend/model
-            os.path.join(project_root, "..", "model"),     # one level above root
-            "./model",                                      # relative current dir
-            "../model",                                     # relative one up
-        ]
-        
-        model_dir = None
-        for path in possible_paths:
-            abs_path = os.path.abspath(path)
-            if os.path.isdir(abs_path):
-                model_dir = abs_path
-                print(f"[INFO] Found model directory at: {model_dir}")
-                break
-        
-        if model_dir is None:
-            print(f"[ERROR] Model directory not found. Tried: {possible_paths}")
-            return []
-    
-    if not os.path.isdir(model_dir):
-        print(f"[ERROR] Model directory does not exist: {model_dir}")
-        return []
-    
-    print(f"[INFO] Scanning models in: {model_dir}")
-    print(f"[INFO] Directory contents: {os.listdir(model_dir)}")
-    
-    models = []
-    for name in sorted(os.listdir(model_dir)):
-        full_path = os.path.join(model_dir, name)
-        
-        # Format 1 — HuggingFace folder
-        if os.path.isdir(full_path):
-            # Cek apakah folder berisi file model
-            try:
-                files = os.listdir(full_path)
-                has_model = any(
-                    f.endswith(('.safetensors', '.bin', '.pt', '.pth')) 
-                    for f in files
-                )
-                has_config = (
-                    'config.json' in files or 
-                    'tokenizer_config.json' in files or
-                    'tokenizer.json' in files
-                )
-                
-                if has_config or has_model:
-                    models.append({
-                        "name": name, 
-                        "path": full_path, 
-                        "type": "folder"
-                    })
-                    print(f"[INFO] Added model folder: {name}")
-                else:
-                    print(f"[WARN] Folder {name} has no model files: {files}")
-                    
-            except Exception as e:
-                print(f"[ERROR] Error reading folder {name}: {e}")
-        
-        # Format 2 — GGUF single file
-        elif name.lower().endswith(".gguf"):
-            models.append({
-                "name": name, 
-                "path": full_path, 
-                "type": "gguf"
-            })
-            print(f"[INFO] Added GGUF file: {name}")
-    
-    print(f"[INFO] Total models found: {len(models)}")
-    return models
+    return [
+        {
+            "id":          "llama-3.1-8b-instant",
+            "name":        "Llama 3.1 · 8B",
+            "provider":    "Meta via Groq",
+            "tier":        "small",
+            "description": "Tercepat (560 t/s). Tidak cocok untuk RAG — TPM limit 6K di free tier.",
+        },
+        {
+            "id":          "meta-llama/llama-4-scout-17b-16e-instruct",
+            "name":        "Llama 4 Scout · 17B",
+            "provider":    "Meta via Groq",
+            "tier":        "medium",
+            "description": "Model MoE terbaru Meta (750 t/s). [Preview]",
+        },
+        {
+            "id":          "openai/gpt-oss-20b",
+            "name":        "GPT OSS · 20B",
+            "provider":    "OpenAI via Groq",
+            "tier":        "medium",
+            "description": "Open-weight OpenAI, sangat cepat (1000 t/s).",
+        },
+        {
+            "id":          "qwen/qwen3-32b",
+            "name":        "Qwen3 · 32B",
+            "provider":    "Alibaba via Groq",
+            "tier":        "large",
+            "description": "Reasoning kuat (400 t/s). [Preview]",
+        },
+        {
+            "id":          "llama-3.3-70b-versatile",
+            "name":        "Llama 3.3 · 70B",
+            "provider":    "Meta via Groq",
+            "tier":        "large",
+            "description": "Rekomendasi utama. 300K TPM — aman untuk semua fitur (280 t/s).",
+        },
+    ]
 
 # =============================================================================
 # BASE PROMPTS LLM
 # =============================================================================
-# Semua string prompt dikelompokkan di sini.
-#
-# Prinsip desain:
-#   - Base prompt hanya berisi ATURAN RESPONS LLM — tidak memuat data user
-#     seperti nama. Informasi identitas user disimpan di ChromaDB collection
-#     'user_identity' dan diinjek ke dalam blok memory, bukan ke base prompt.
-#
-# Placeholder yang diisi via .format() di pipeline.py:
-#   {memory_section}  → blok memory yang sudah diformat (termasuk identitas
-#                        user jika ada), atau "" jika tidak ada
-#   {memory}          → teks memory mentah (dipakai di dalam memory_block)
-#   {context_str}     → konteks jurnal gabungan (knowledge pipeline)
-#   {source_str}      → daftar sumber referensi (knowledge pipeline)
-#   {max_words}       → batas kata summary (memory pipeline)
-#   {previous_summary}→ summary lama (memory update prompt)
-#   {question}        → pertanyaan user
-#   {answer}          → jawaban Agribot
 
 PROMPTS = {
 
@@ -330,8 +256,10 @@ PROMPTS = {
     "social_system_id": (
         "Kamu adalah Agribot, asisten pertanian yang ramah dan santai. "
         "Selalu gunakan kata 'saya' untuk merujuk dirimu sendiri, JANGAN gunakan 'kami'. "
-        "Balas percakapan sosial dengan singkat, hangat, dan natural dalam Bahasa Indonesia. "
+        "Balas percakapan sosial dengan singkat dan natural dalam Bahasa Indonesia. "
         "Jangan sebut tanaman atau pertanian kecuali diminta pengguna. "
+        "JANGAN memperkenalkan diri kecuali pengguna bertanya siapa kamu. "
+        "Balas maksimal 1-2 kalimat untuk sapaan biasa. "
         "{memory_section}"
         "ATURAN TENTANG IDENTITAS PENGGUNA:\n"
         "- Jika RIWAYAT di atas memuat 'Nama pengguna: X', kamu SUDAH TAHU nama pengguna — gunakan langsung.\n"
@@ -361,6 +289,8 @@ PROMPTS = {
         "You are Agribot, a friendly farming assistant. "
         "Reply to casual social messages briefly and naturally in English. "
         "Do not mention plants or farming unless the user asks. "
+        "DO NOT introduce yourself unless the user asks who you are. "
+        "Respond with maximum of 1 to 2 sentences for a casual social messages"
         "{memory_section}"
         "RULES ABOUT USER IDENTITY:\n"
         "- If the HISTORY above contains 'Nama pengguna: X' or 'User name: X', "
@@ -422,4 +352,75 @@ PROMPTS = {
         "Agribot: {answer}\n\n"
         "Ringkasan baru (maks {max_words} kata, Bahasa Indonesia):"
     ),
+
+    # System prompt social — ringkas untuk model lokal (7B/8B)
+    # Few-shot dihapus karena model kecil cenderung mereproduksi contoh
+    "social_system_id_local": (
+        "Kamu adalah Agribot, asisten pertanian yang ramah dan santai. "
+        "Selalu gunakan kata 'saya' untuk merujuk dirimu sendiri, JANGAN gunakan 'kami'. "
+        "Balas pesan pengguna dengan SINGKAT, hangat, dan natural dalam Bahasa Indonesia. "
+        "Jangan sebut tanaman atau pertanian kecuali diminta pengguna. "
+        "{memory_section}"
+        "ATURAN WAJIB IDENTITAS PENGGUNA:\n"
+        "- Nama pengguna HANYA boleh diambil dari blok INGATAN di atas.\n"
+        "- DILARANG KERAS mengarang, mengasumsikan, atau menggunakan nama "
+        "selain yang tertulis di INGATAN.\n"
+        "- Jika di INGATAN tertulis 'Nama pengguna: X', maka nama pengguna ADALAH 'X' — "
+        "gunakan apa adanya, jangan diganti.\n"
+        "- Jika tidak ada nama di INGATAN, katakan kamu belum tahu nama pengguna.\n"
+        "- JANGAN pernah menyebut nama yang tidak ada di INGATAN.\n"
+    ),
+
+    "social_system_en_local": (
+        "You are Agribot, a friendly farming assistant. "
+        "Reply to casual messages BRIEFLY and naturally in English. "
+        "Do not mention plants or farming unless asked. "
+        "{memory_section}"
+        "MANDATORY IDENTITY RULES:\n"
+        "- The user's name may ONLY be taken from the MEMORY block above.\n"
+        "- STRICTLY FORBIDDEN to fabricate, assume, or use any name "
+        "not written in MEMORY.\n"
+        "- If MEMORY says 'Nama pengguna: X' or 'User name: X', "
+        "the user's name IS 'X' — use it as-is, do not replace it.\n"
+        "- If no name exists in MEMORY, say you don't know the user's name yet.\n"
+        "- NEVER mention any name that does not appear in MEMORY.\n"
+    ),
+
+    "knowledge_system_id_local": (
+        "Kamu adalah Agribot, pakar penyakit tanaman. "
+        "Jawab pertanyaan pengguna HANYA berdasarkan KONTEKS JURNAL di bawah. "
+        "Gunakan kata 'saya'. Jawab dalam Bahasa Indonesia. "
+        "{memory_section}"
+        "ATURAN WAJIB:\n"
+        "1. Jawab hanya dari KONTEKS JURNAL — jangan mengarang.\n"
+        "2. Jika informasi tidak ada di jurnal, katakan tidak tahu.\n"
+        "3. Nama pengguna HANYA boleh diambil dari blok INGATAN di atas — "
+        "DILARANG mengarang atau mengasumsikan nama.\n"
+        "4. Jika di INGATAN tertulis 'Nama pengguna: X', nama pengguna ADALAH 'X' — "
+        "gunakan apa adanya, jangan diganti.\n"
+        "5. Jika tidak ada nama di INGATAN, jangan sebut nama apapun.\n\n"
+        "KONTEKS JURNAL:\n{context_str}\n\n"
+        "SUMBER:\n{source_str}"
+    ),
+
+    "knowledge_system_en_local": (
+        "You are Agribot, a plant disease expert. "
+        "Answer ONLY based on the JOURNAL CONTEXT below. "
+        "Use 'I'. Answer in English. "
+        "{memory_section}"
+        "MANDATORY RULES:\n"
+        "1. Answer only from JOURNAL CONTEXT — do not fabricate.\n"
+        "2. If information is absent from the journal, say you don't know.\n"
+        "3. The user's name may ONLY be taken from the MEMORY block above — "
+        "FORBIDDEN to fabricate or assume any name.\n"
+        "4. If MEMORY says 'Nama pengguna: X' or 'User name: X', "
+        "the user's name IS 'X' — use it as-is, do not replace it.\n"
+        "5. If no name exists in MEMORY, do not mention any name.\n\n"
+        "JOURNAL CONTEXT:\n{context_str}\n\n"
+        "SOURCES:\n{source_str}"
+    ),
 }
+
+_apply_token_budget(
+    GROQ_MODEL_SAFE_TOKEN_BUDGET.get(CONFIG["groq_model"], 4_800)
+)

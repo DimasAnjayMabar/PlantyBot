@@ -35,10 +35,10 @@ const _kRefreshInterval = Duration(minutes: 25);
 // Warna & konstanta
 // ---------------------------------------------------------------------------
 
-const _bg        = Color(0xFF020202);
-const _neon      = Color(0xFF16DB65);
-const _neonDim   = Color(0x3316DB65);
-const _surface   = Color(0xFF0D0D0D);
+const _bg = Color(0xFF020202);
+const _neon = Color(0xFF16DB65);
+const _neonDim = Color(0x3316DB65);
+const _surface = Color(0xFF0D0D0D);
 const _surfaceAlt = Color(0xFF111111);
 const _textMuted = Color(0xFFA3A3A3);
 
@@ -47,12 +47,12 @@ const _textMuted = Color(0xFFA3A3A3);
 // ---------------------------------------------------------------------------
 
 class _UserData {
-  final int    id;
+  final int id;
   final String username;
   final String email;
   final String name;
-  final bool   isVerified;
-  final bool   isActive;
+  final bool isVerified;
+  final bool isActive;
 
   const _UserData({
     required this.id,
@@ -64,21 +64,21 @@ class _UserData {
   });
 
   factory _UserData.fromJson(Map<String, dynamic> json) => _UserData(
-        id        : json['id']          as int,
-        username  : json['username']    as String,
-        email     : json['email']       as String,
-        name      : json['name']        as String,
-        isVerified: json['is_verified'] as bool,
-        isActive  : json['is_active']   as bool,
-      );
+    id: json['id'] as int,
+    username: json['username'] as String,
+    email: json['email'] as String,
+    name: json['name'] as String,
+    isVerified: json['is_verified'] as bool,
+    isActive: json['is_active'] as bool,
+  );
 }
 
 class _SessionItem {
-  final int    sessionId;
+  final int sessionId;
   final String deviceInfo;
   final String createdAt;
   final String accessTokenExpiresAt;
-  final bool   isCurrent;
+  final bool isCurrent;
 
   const _SessionItem({
     required this.sessionId,
@@ -89,12 +89,12 @@ class _SessionItem {
   });
 
   factory _SessionItem.fromJson(Map<String, dynamic> json) => _SessionItem(
-        sessionId           : json['session_id']              as int,
-        deviceInfo          : json['device_info']             as String? ?? 'Unknown Device',
-        createdAt           : json['created_at']              as String,
-        accessTokenExpiresAt: json['access_token_expires_at'] as String,
-        isCurrent           : json['is_current']              as bool,
-      );
+    sessionId: json['session_id'] as int,
+    deviceInfo: json['device_info'] as String? ?? 'Unknown Device',
+    createdAt: json['created_at'] as String,
+    accessTokenExpiresAt: json['access_token_expires_at'] as String,
+    isCurrent: json['is_current'] as bool,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -106,13 +106,9 @@ class UserProfilePage extends StatefulWidget {
   /// lewat constructor. Constructor tetap menerima parameter opsional untuk
   /// kompatibilitas sementara sebelum semua route diupdate.
   final String? accessToken;
-  final int?    userId;
+  final int? userId;
 
-  const UserProfilePage({
-    super.key,
-    this.accessToken,
-    this.userId,
-  });
+  const UserProfilePage({super.key, this.accessToken, this.userId});
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -122,17 +118,17 @@ class _UserProfilePageState extends State<UserProfilePage>
     with SingleTickerProviderStateMixin {
   // ── Auth state — dibaca dari secure storage saat initState ────────────────
   String? _accessToken;
-  int?    _userId;
-  Timer?  _refreshTimer;
+  int? _userId;
+  Timer? _refreshTimer;
 
-  _UserData?         _user;
-  List<_SessionItem> _sessions      = [];
-  bool               _loadingUser   = true;
-  bool               _loadingLogout = false;
-  String?            _error;
+  _UserData? _user;
+  List<_SessionItem> _sessions = [];
+  bool _loadingUser = true;
+  bool _loadingLogout = false;
+  String? _error;
 
   late final AnimationController _fadeController;
-  late final Animation<double>   _fadeAnimation;
+  late final Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -152,17 +148,17 @@ class _UserProfilePageState extends State<UserProfilePage>
   Future<void> _initAuth() async {
     try {
       // Baca sequential — IndexedDB web tidak support concurrent reads
-      final storedToken  = await _storage.read(key: 'access_token');
+      final storedToken = await _storage.read(key: 'access_token');
       final storedUserId = await _storage.read(key: 'user_id');
 
-      _accessToken = storedToken  ?? widget.accessToken;
-      _userId      = (storedUserId != null)
+      _accessToken = storedToken ?? widget.accessToken;
+      _userId = (storedUserId != null)
           ? int.tryParse(storedUserId)
           : widget.userId;
     } catch (_) {
       // Storage error — fallback ke constructor params
       _accessToken = widget.accessToken;
-      _userId      = widget.userId;
+      _userId = widget.userId;
     }
 
     if (_accessToken == null || _accessToken!.isEmpty || _userId == null) {
@@ -208,13 +204,13 @@ class _UserProfilePageState extends State<UserProfilePage>
       );
 
       if (response.statusCode == 200) {
-        final data        = response.data['data'] as Map<String, dynamic>;
-        final newAccess   = data['access_token']  as String;
-        final newRefresh  = data['refresh_token'] as String;
+        final data = response.data['data'] as Map<String, dynamic>;
+        final newAccess = data['access_token'] as String;
+        final newRefresh = data['refresh_token'] as String;
 
         // Tulis token baru ke storage
         await Future.wait([
-          _storage.write(key: 'access_token',  value: newAccess),
+          _storage.write(key: 'access_token', value: newAccess),
           _storage.write(key: 'refresh_token', value: newRefresh),
         ]);
 
@@ -254,35 +250,29 @@ class _UserProfilePageState extends State<UserProfilePage>
   }
 
   Map<String, String> get _authHeaders => {
-        'Authorization': 'Bearer ${_accessToken ?? ''}',
-      };
+    'Authorization': 'Bearer ${_accessToken ?? ''}',
+  };
 
   // ── Fetch user + sessions sekaligus ───────────────────────────────────────
 
   Future<void> _fetchData() async {
     setState(() {
       _loadingUser = true;
-      _error       = null;
+      _error = null;
     });
 
     try {
       final results = await Future.wait([
-        _dio.get(
-          '/users/$_userId',
-          options: Options(headers: _authHeaders),
-        ),
-        _dio.get(
-          '/users/sessions',
-          options: Options(headers: _authHeaders),
-        ),
+        _dio.get('/users/$_userId', options: Options(headers: _authHeaders)),
+        _dio.get('/users/sessions', options: Options(headers: _authHeaders)),
       ]);
 
-      final userData     = results[0].data['data'] as Map<String, dynamic>;
-      final sessionData  = results[1].data['data'] as Map<String, dynamic>;
+      final userData = results[0].data['data'] as Map<String, dynamic>;
+      final sessionData = results[1].data['data'] as Map<String, dynamic>;
       final sessionsList = sessionData['sessions'] as List<dynamic>;
 
       setState(() {
-        _user     = _UserData.fromJson(userData);
+        _user = _UserData.fromJson(userData);
         _sessions = sessionsList
             .map((s) => _SessionItem.fromJson(s as Map<String, dynamic>))
             .toList();
@@ -296,12 +286,12 @@ class _UserProfilePageState extends State<UserProfilePage>
         msg = e.response!.data['detail'].toString();
       }
       setState(() {
-        _error       = msg;
+        _error = msg;
         _loadingUser = false;
       });
     } catch (_) {
       setState(() {
-        _error       = 'Terjadi kesalahan tidak terduga.';
+        _error = 'Terjadi kesalahan tidak terduga.';
         _loadingUser = false;
       });
     }
@@ -311,19 +301,16 @@ class _UserProfilePageState extends State<UserProfilePage>
 
   Future<void> _handleLogout() async {
     final confirmed = await _showConfirmDialog(
-      title   : 'Keluar',
-      message : 'Yakin ingin keluar dari akun ini?',
-      confirm : 'Keluar',
+      title: 'Keluar',
+      message: 'Yakin ingin keluar dari akun ini?',
+      confirm: 'Keluar',
     );
     if (!confirmed || !mounted) return;
 
     setState(() => _loadingLogout = true);
 
     try {
-      await _dio.post(
-        '/users/logout',
-        options: Options(headers: _authHeaders),
-      );
+      await _dio.post('/users/logout', options: Options(headers: _authHeaders));
 
       // Hapus semua token dari storage
       await Future.wait([
@@ -356,7 +343,7 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
 
     final confirmed = await _showConfirmDialog(
-      title  : 'Logout Device Lain',
+      title: 'Logout Device Lain',
       message: 'Logout dari $otherCount device lain yang sedang aktif?',
       confirm: 'Logout Semua',
     );
@@ -478,21 +465,19 @@ class _UserProfilePageState extends State<UserProfilePage>
   // ── Snackbars ─────────────────────────────────────────────────────────────
 
   void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      _buildSnackbar(message, const Color(0xFFFF4D4D)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(_buildSnackbar(message, const Color(0xFFFF4D4D)));
   }
 
   void _showSuccessSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      _buildSnackbar(message, _neon),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(_buildSnackbar(message, _neon));
   }
 
   void _showInfoSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      _buildSnackbar(message, const Color(0xFF2A2A2A)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(_buildSnackbar(message, const Color(0xFF2A2A2A)));
   }
 
   SnackBar _buildSnackbar(String message, Color borderColor) {
@@ -523,85 +508,83 @@ class _UserProfilePageState extends State<UserProfilePage>
                 child: CircularProgressIndicator(color: _neon, strokeWidth: 2),
               )
             : _error != null
-                ? _ErrorView(error: _error!, onRetry: _fetchData)
-                : FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Column(
-                      children: [
-                        // Tombol kembali di luar CustomScrollView
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: GestureDetector(
-                              onTap: () {
-                                if (context.canPop()) {
-                                  context.pop();
-                                } else {
-                                  // Fallback: navigasi ke home atau halaman utama
-                                  context.go('/chats'); // atau context.go('/home') sesuai route aplikasi Anda
-                                }
-                              },
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: _neonDim,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _neon.withOpacity(0.25),
-                                      blurRadius: 12,
-                                      spreadRadius: 0,
-                                    ),
-                                  ],
+            ? _ErrorView(error: _error!, onRetry: _fetchData)
+            : FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  children: [
+                    // Tombol kembali di luar CustomScrollView
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(context).pop,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: _neonDim,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _neon.withOpacity(0.25),
+                                  blurRadius: 12,
+                                  spreadRadius: 0,
                                 ),
-                                child: const Icon(
-                                  Icons.arrow_back_rounded,
-                                  color: _neon,
-                                  size: 24,
-                                ),
-                              ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: _neon,
+                              size: 24,
                             ),
                           ),
                         ),
-                        // CustomScrollView tanpa AppBar
-                        Expanded(
-                          child: CustomScrollView(
-                            slivers: [
-                              SliverPadding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 8),
-                                sliver: SliverList(
-                                  delegate: SliverChildListDelegate([
-                                    _ProfileCard(user: _user!),
-                                    const SizedBox(height: 24),
-                                    _CredentialCard(
-                                      user: _user!,
-                                      onChangeEmail: () => context.push(
-                                        '/users/change-email/otp/verify-otp?email=${Uri.encodeComponent(_user!.email)}',
-                                      ).then((_) => _fetchData()),
-                                    ),
-                                    const SizedBox(height: 24),
-                                    _SessionsCard(
-                                      sessions: _sessions,
-                                      onLogoutOtherDevices: _handleLogoutOtherDevices,
-                                    ),
-                                    const SizedBox(height: 32),
-                                    _LogoutButton(
-                                      isLoading: _loadingLogout,
-                                      onPressed: _handleLogout,
-                                    ),
-                                    const SizedBox(height: 32),
-                                  ]),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    // CustomScrollView tanpa AppBar
+                    Expanded(
+                      child: CustomScrollView(
+                        slivers: [
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 8,
+                            ),
+                            sliver: SliverList(
+                              delegate: SliverChildListDelegate([
+                                _ProfileCard(user: _user!),
+                                const SizedBox(height: 24),
+                                _CredentialCard(
+                                  user: _user!,
+                                  onChangeEmail: () => context
+                                      .push(
+                                        '/users/change-email/otp/verify-otp?email=${Uri.encodeComponent(_user!.email)}',
+                                      )
+                                      .then((_) => _fetchData()),
+                                ),
+                                const SizedBox(height: 24),
+                                _SessionsCard(
+                                  sessions: _sessions,
+                                  onLogoutOtherDevices:
+                                      _handleLogoutOtherDevices,
+                                ),
+                                const SizedBox(height: 32),
+                                _LogoutButton(
+                                  isLoading: _loadingLogout,
+                                  onPressed: _handleLogout,
+                                ),
+                                const SizedBox(height: 32),
+                              ]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -697,7 +680,9 @@ class _ProfileCard extends StatelessWidget {
                 Row(
                   children: [
                     _StatusBadge(
-                      label: user.isVerified ? 'Terverifikasi' : 'Belum Verifikasi',
+                      label: user.isVerified
+                          ? 'Terverifikasi'
+                          : 'Belum Verifikasi',
                       color: user.isVerified ? _neon : const Color(0xFFFFB800),
                     ),
                     const SizedBox(width: 8),
@@ -719,7 +704,7 @@ class _ProfileCard extends StatelessWidget {
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.label, required this.color});
   final String label;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -749,7 +734,7 @@ class _StatusBadge extends StatelessWidget {
 
 class _CredentialCard extends StatelessWidget {
   const _CredentialCard({required this.user, this.onChangeEmail});
-  final _UserData    user;
+  final _UserData user;
   final VoidCallback? onChangeEmail;
 
   @override
@@ -763,7 +748,11 @@ class _CredentialCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
-              const Icon(Icons.mail_outline_rounded, size: 16, color: _textMuted),
+              const Icon(
+                Icons.mail_outline_rounded,
+                size: 16,
+                color: _textMuted,
+              ),
               const SizedBox(width: 10),
               Text(
                 'Email',
@@ -804,7 +793,7 @@ class _CredentialCard extends StatelessWidget {
         ),
         _Divider(),
         _InfoRow(
-          icon : Icons.tag_rounded,
+          icon: Icons.tag_rounded,
           label: 'User ID',
           value: '#${user.id}',
           valueColor: _textMuted,
@@ -825,7 +814,7 @@ class _SessionsCard extends StatelessWidget {
   });
 
   final List<_SessionItem> sessions;
-  final VoidCallback       onLogoutOtherDevices;
+  final VoidCallback onLogoutOtherDevices;
 
   @override
   Widget build(BuildContext context) {
@@ -853,10 +842,7 @@ class _SessionsCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'Tidak ada sesi aktif.',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: _textMuted,
-                  ),
+                  style: GoogleFonts.poppins(fontSize: 13, color: _textMuted),
                 ),
               ),
             ]
@@ -879,13 +865,13 @@ class _SessionTile extends StatelessWidget {
       // Server menyimpan created_at dalam UTC tanpa suffix 'Z'.
       // Tambahkan 'Z' agar DateTime.parse tahu ini UTC, baru konversi ke local.
       final normalized = iso.endsWith('Z') ? iso : '${iso}Z';
-      final dt  = DateTime.parse(normalized).toLocal();
+      final dt = DateTime.parse(normalized).toLocal();
       final now = DateTime.now();
       final diff = now.difference(dt);
-      if (diff.inMinutes < 1)  return 'Baru saja';
-      if (diff.inHours < 1)    return '${diff.inMinutes} menit lalu';
-      if (diff.inDays < 1)     return '${diff.inHours} jam lalu';
-      if (diff.inDays < 7)     return '${diff.inDays} hari lalu';
+      if (diff.inMinutes < 1) return 'Baru saja';
+      if (diff.inHours < 1) return '${diff.inMinutes} menit lalu';
+      if (diff.inDays < 1) return '${diff.inHours} jam lalu';
+      if (diff.inDays < 7) return '${diff.inDays} hari lalu';
       return '${dt.day}/${dt.month}/${dt.year}';
     } catch (_) {
       return iso;
@@ -935,7 +921,9 @@ class _SessionTile extends StatelessWidget {
                       Container(
                         margin: const EdgeInsets.only(left: 8),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: _neonDim,
                           borderRadius: BorderRadius.circular(4),
@@ -954,10 +942,7 @@ class _SessionTile extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   'Login ${_formatDate(session.createdAt)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: _textMuted,
-                  ),
+                  style: GoogleFonts.poppins(fontSize: 11, color: _textMuted),
                 ),
               ],
             ),
@@ -974,7 +959,7 @@ class _SessionTile extends StatelessWidget {
 
 class _LogoutButton extends StatelessWidget {
   const _LogoutButton({required this.isLoading, required this.onPressed});
-  final bool         isLoading;
+  final bool isLoading;
   final VoidCallback onPressed;
 
   @override
@@ -1037,10 +1022,10 @@ class _SectionCard extends StatelessWidget {
     this.trailing,
   });
 
-  final String       title;
-  final IconData     icon;
+  final String title;
+  final IconData icon;
   final List<Widget> children;
-  final Widget?      trailing;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -1069,10 +1054,7 @@ class _SectionCard extends StatelessWidget {
                     letterSpacing: 0.3,
                   ),
                 ),
-                if (trailing != null) ...[
-                  const Spacer(),
-                  trailing!,
-                ],
+                if (trailing != null) ...[const Spacer(), trailing!],
               ],
             ),
           ),
@@ -1106,9 +1088,9 @@ class _InfoRow extends StatelessWidget {
   });
 
   final IconData icon;
-  final String   label;
-  final String   value;
-  final Color?   valueColor;
+  final String label;
+  final String value;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1157,7 +1139,7 @@ class _Divider extends StatelessWidget {
 
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.error, required this.onRetry});
-  final String   error;
+  final String error;
   final VoidCallback onRetry;
 
   @override
@@ -1188,7 +1170,9 @@ class _ErrorView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 28, vertical: 12),
+                  horizontal: 28,
+                  vertical: 12,
+                ),
               ),
               child: Text(
                 'Coba Lagi',

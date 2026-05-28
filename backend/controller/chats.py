@@ -493,25 +493,6 @@ async def upload_knowledge_pdf(
     tahun: str | None = Form(default=None),
     current_session: UserAuth = Depends(get_current_session),
 ):
-    """
-    Upload PDF untuk ditambahkan ke knowledge base chatbot.
-
-    Form fields:
-      - file    : file PDF (wajib, maks 50 MB)
-      - judul   : judul jurnal/dokumen (opsional)
-      - penulis : nama penulis (opsional)
-      - tahun   : tahun terbit, e.g. "2024" (opsional)
-
-    Alur:
-      1. Validasi tipe file (harus PDF) dan ukuran (maks 50 MB)
-      2. Baca bytes file di sini (sebelum UploadFile di-close oleh FastAPI)
-      3. Serahkan ke KnowledgeService yang akan:
-         a. Simpan file ke ./dataset/
-         b. Jalankan embedder di background thread
-      4. Return 202 Accepted — embedder berjalan async
-
-    Hanya user yang sudah login yang bisa upload (requires auth).
-    """
     # ── Validasi tipe MIME ────────────────────────────────────────────────────
     if file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(
@@ -575,99 +556,116 @@ def get_available_models(
     current_session: UserAuth = Depends(get_current_session),
 ):
     """
-    Ambil daftar model lokal yang tersedia di folder model/.
+    Daftar model Groq yang tersedia beserta info kapasitas dan tier.
     """
-    try:
-        from config import list_local_models
-        models = list_local_models()
-        
-        # Debug logging
-        logger.info(f"Models found: {models}")
-        logger.info(f"Model folder path: {os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'model'))}")
-        
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "success": True,
-                "message": "Daftar model berhasil diambil.",
-                "models": models,
-            },
-        )
-    except Exception as e:
-        logger.error(f"GET /models error → {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Terjadi kesalahan saat mengambil daftar model: {str(e)}",
-        )
+    from config import CONFIG
 
+    GROQ_MODELS = [
+        {
+            "id":          "llama-3.1-8b-instant",
+            "name":        "Llama 3.1 · 8B",
+            "provider":    "Meta via Groq",
+            "tier":        "small",
+            "description": "Tercepat (560 t/s). Cocok untuk pertanyaan sederhana dan cepat.",
+        },
+        {
+            "id":          "meta-llama/llama-4-scout-17b-16e-instruct",
+            "name":        "Llama 4 Scout · 17B",
+            "provider":    "Meta via Groq",
+            "tier":        "medium",
+            "description": "Model MoE terbaru Meta (750 t/s). Efisien dan mendukung gambar. [Preview]",
+        },
+        {
+            "id":          "openai/gpt-oss-20b",
+            "name":        "GPT OSS · 20B",
+            "provider":    "OpenAI via Groq",
+            "tier":        "medium",
+            "description": "Model open-weight OpenAI, sangat cepat (1000 t/s). Reasoning baik.",
+        },
+        {
+            "id":          "qwen/qwen3-32b",
+            "name":        "Qwen3 · 32B",
+            "provider":    "Alibaba via Groq",
+            "tier":        "large",
+            "description": "Reasoning kuat dari Qwen3 (400 t/s). Unggul untuk analisis bertahap. [Preview]",
+        },
+        {
+            "id":          "llama-3.3-70b-versatile",
+            "name":        "Llama 3.3 · 70B",
+            "provider":    "Meta via Groq",
+            "tier":        "large",
+            "description": "Model terbaik untuk jawaban kompleks (280 t/s). Rekomendasi utama.",
+        },
+    ]
+
+    active_model = CONFIG.get("groq_model", "llama-3.3-70b-versatile")
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "success": True,
+            "message": "Daftar model berhasil diambil.",
+            "models":  GROQ_MODELS,
+            "active":  active_model,
+        },
+    )
 
 @router.post("/models/set-model", status_code=status.HTTP_200_OK)
 async def set_active_model(
     request: Request,
     current_session: UserAuth = Depends(get_current_session),
 ):
-    """
-    Ganti mode LLM yang digunakan pipeline.
-    
-    Request body:
-      {
-        "mode": "groq" | "local",
-        "path": "/abs/path/to/model"  # wajib jika mode="local"
-      }
-    
-    Mode "groq"  → menggunakan Groq API (llama-3.3-70b-versatile)
-    Mode "local" → menggunakan model HuggingFace dari folder model/
-    
-    Endpoint ini akan:
-      1. Update CONFIG["llm_mode"] dan device placement
-      2. Rebuild seluruh pipeline (RAGModels + RAGPipeline)
-      3. Mengubah placement embedding/reranker/nlp sesuai mode:
-         - groq  → GPU (jika tersedia) untuk embedding/reranker
-         - local → CPU untuk embedding/reranker (GPU untuk LLM lokal)
-    """
     import json
-    
+
     try:
-        body = await request.json()
-        mode = body.get("mode")
-        path = body.get("path")
-        
-        if mode not in ("groq", "local"):
+        body     = await request.json()
+        model_id = body.get("model_id", "").strip()
+
+        if not model_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Mode harus 'groq' atau 'local'.",
+                detail="Field 'model_id' wajib diisi.",
             )
-        
-        if mode == "local" and not path:
+
+        # Daftar model Groq yang diizinkan
+        ALLOWED_MODELS = {
+            "llama-3.1-8b-instant",
+            "llama-3.3-70b-versatile",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3-32b",
+            "meta-llama/llama-4-scout-17b-16e-instruct",
+        }
+
+        if model_id not in ALLOWED_MODELS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Path model wajib diisi saat mode='local'.",
+                detail=f"Model '{model_id}' tidak dikenali. "
+                       f"Gunakan salah satu dari: {', '.join(sorted(ALLOWED_MODELS))}",
             )
-        
-        # Import fungsi reload dari pipeline
+
+        # Update CONFIG sebelum reload pipeline
+        from config import CONFIG
+        CONFIG["groq_model"] = model_id
+
         from pipeline import reload_with_model
-        
-        # Reload pipeline dengan mode baru
-        reload_with_model(mode, path if mode == "local" else None)
-        
+        reload_with_model("groq")
+
         logger.info(
-            f"Model switched → mode={mode}  "
-            f"path={path if mode == 'local' else 'groq'}  "
-            f"user_id={current_session.user_id}"
+            f"Groq model switched → model={model_id}  user_id={current_session.user_id}"
         )
-        
+
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
                 "success": True,
-                "message": f"Berhasil beralih ke model {'Groq API' if mode == 'groq' else 'Lokal'}.",
+                "message": f"Berhasil beralih ke model {model_id}.",
                 "data": {
-                    "mode": mode,
-                    "path": path if mode == "local" else None,
+                    "mode":     "groq",
+                    "model_id": model_id,
                 },
             },
         )
-        
+
     except json.JSONDecodeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

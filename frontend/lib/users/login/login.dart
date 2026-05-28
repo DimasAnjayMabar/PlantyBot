@@ -1,8 +1,8 @@
 // lib/users/login.dart
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // <-- Untuk LogicalKeyboardKey
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
+import 'package:frontend/services/token_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -16,15 +16,6 @@ final _dio = Dio(
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
     headers: {'Content-Type': 'application/json'},
-  ),
-);
-
-// Secure Storage — final bukan const agar tidak crash di web
-final _storage = FlutterSecureStorage(
-  aOptions: const AndroidOptions(encryptedSharedPreferences: true),
-  webOptions: const WebOptions(
-    dbName: 'agribot_secure',
-    publicKey: 'agribot_key',
   ),
 );
 
@@ -85,6 +76,22 @@ class _LoginPageState extends State<LoginPage>
       curve: Curves.easeOut,
     );
     _fadeController.forward();
+    
+    // Cek apakah user sudah login sebelumnya
+    _checkExistingSession();
+  }
+  
+  /// Cek session yang sudah ada saat app dimulai
+  Future<void> _checkExistingSession() async {
+    final accessToken = await TokenStorage.read(key: 'access_token');
+    final userId = await TokenStorage.read(key: 'user_id');
+    
+    if (accessToken != null && accessToken.isNotEmpty && userId != null) {
+      if (mounted) {
+        // Langsung arahkan ke halaman chats
+        context.go('/chats');
+      }
+    }
   }
 
   @override
@@ -102,39 +109,86 @@ class _LoginPageState extends State<LoginPage>
   Future<void> _handleLogin() async {
     if (_isLoading) return;
     if (!_formKey.currentState!.validate()) return;
+    
+    // Validasi tambahan: bersihkan input
+    final identifier = _identifierController.text.trim();
+    final password = _passwordController.text;
+    
+    if (identifier.isEmpty) {
+      _showErrorSnackbar('Username atau email tidak boleh kosong');
+      return;
+    }
+    
+    if (password.isEmpty) {
+      _showErrorSnackbar('Password tidak boleh kosong');
+      return;
+    }
+    
     setState(() => _isLoading = true);
 
     try {
       final response = await _dio.post(
         '/users/login',
         data: {
-          'identifier': _identifierController.text.trim(),
-          'password'  : _passwordController.text,
+          'identifier': identifier,
+          'password': password,
         },
       );
 
       if (response.statusCode == 200 && mounted) {
         final data = response.data['data'] as Map<String, dynamic>;
-
-        await _storage.write(key: 'access_token',  value: data['access_token']  as String);
-        await _storage.write(key: 'refresh_token', value: data['refresh_token'] as String);
-        await _storage.write(key: 'user_id',       value: (data['user_id'] as int).toString());
+        
+        final accessToken = data['access_token'] as String;
+        final refreshToken = data['refresh_token'] as String;
+        final userId = (data['user_id'] as int).toString();
+        
+        // Gunakan TokenStorage yang sudah terintegrasi dengan SharedPreferences/FlutterSecureStorage
+        await TokenStorage.write(key: 'access_token', value: accessToken);
+        await TokenStorage.write(key: 'refresh_token', value: refreshToken);
+        await TokenStorage.write(key: 'user_id', value: userId);
+        await TokenStorage.write(
+          key: 'session_created_at',
+          value: DateTime.now().toIso8601String(),
+        );
 
         if (!mounted) return;
+        
+        // Tampilkan pesan sukses
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Login berhasil! Selamat datang kembali.',
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.white),
+            ),
+            backgroundColor: _neon,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
         context.go('/chats');
       }
     } on DioException catch (e) {
       if (!mounted) return;
       String message = 'Terjadi kesalahan. Coba lagi.';
+      
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
         message = 'Koneksi timeout. Periksa jaringan kamu.';
+      } else if (e.response?.statusCode == 401) {
+        message = 'Username/email atau password salah.';
       } else if (e.response?.data['detail'] != null) {
         message = e.response!.data['detail'].toString();
+      } else if (e.response?.data['message'] != null) {
+        message = e.response!.data['message'].toString();
       }
+      
       _showErrorSnackbar(message);
-    } catch (_) {
-      if (mounted) _showErrorSnackbar('Terjadi kesalahan tidak terduga.');
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackbar('Terjadi kesalahan tidak terduga: ${e.toString()}');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -163,7 +217,6 @@ class _LoginPageState extends State<LoginPage>
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
-        // ── 1. BUNGKUS DENGAN SHORTCUTS & ACTIONS SECARA GLOBAL ──
         child: Shortcuts(
           shortcuts: <ShortcutActivator, Intent>{
             const SingleActivator(LogicalKeyboardKey.enter): const SubmitIntent(),
@@ -173,11 +226,10 @@ class _LoginPageState extends State<LoginPage>
             actions: <Type, Action<Intent>>{
               SubmitIntent: CallbackAction<SubmitIntent>(
                 onInvoke: (intent) {
-                  // Logika Navigasi Fokus & Submit
                   if (_identifierFocus.hasFocus) {
-                    _passwordFocus.requestFocus(); // Pindah ke password
+                    _passwordFocus.requestFocus();
                   } else {
-                    _handleLogin(); // Jika di password atau di mana saja, langsung login
+                    _handleLogin();
                   }
                   return null;
                 },
@@ -192,11 +244,8 @@ class _LoginPageState extends State<LoginPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── Logo ──────────────────────────────────────────────────
                       _Logo(),
                       const SizedBox(height: 40),
-
-                      // ── Heading ───────────────────────────────────────────────
                       Text(
                         'Masuk',
                         style: GoogleFonts.poppins(
@@ -216,8 +265,6 @@ class _LoginPageState extends State<LoginPage>
                         ),
                       ),
                       const SizedBox(height: 36),
-
-                      // ── Fields ────────────────────────────────────────────────
                       _NeonField(
                         controller: _identifierController,
                         focusNode: _identifierFocus,
@@ -233,7 +280,6 @@ class _LoginPageState extends State<LoginPage>
                         },
                       ),
                       const SizedBox(height: 20),
-
                       _NeonField(
                         controller: _passwordController,
                         focusNode: _passwordFocus,
@@ -257,10 +303,9 @@ class _LoginPageState extends State<LoginPage>
                           if (v == null || v.isEmpty) return 'Password tidak boleh kosong';
                           return null;
                         },
+                        onFieldSubmitted: (_) => _handleLogin(),
                       ),
                       const SizedBox(height: 14),
-
-                      // ── Lupa Password anchor ───────────────────────────────────
                       Align(
                         alignment: Alignment.centerRight,
                         child: GestureDetector(
@@ -276,16 +321,12 @@ class _LoginPageState extends State<LoginPage>
                         ),
                       ),
                       const SizedBox(height: 32),
-
-                      // ── Submit button ──────────────────────────────────────────
                       _NeonButton(
                         label: 'Masuk',
                         isLoading: _isLoading,
                         onPressed: _handleLogin,
                       ),
                       const SizedBox(height: 28),
-
-                      // ── Belum punya akun ───────────────────────────────────────
                       Center(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,

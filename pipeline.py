@@ -1,43 +1,3 @@
-"""
-RAG Pipeline — Struktur Baru + Memory System
-=============================
-Alur kerja:
-  1. ChromaDB  → Wide retrieval dari collection 'konten_isi'
-                 Mendapat: isi_id, jurnal_id, konten_chunk
-  2. Neo4j     → Context enrichment per kandidat:
-                 - Node Isi (sub_judul, halaman)
-                 - Node Jurnal (judul, doi, penulis, tanggal_rilis)
-                 - Neighbour chunks via relasi [:NEXT]
-  3. Reranking → BGE cross-encoder menghitung skor relevansi
-                 teks gabungan (prev + target + next) vs query
-  4. Filtering → top-N + diversifikasi sumber (max N chunk per jurnal)
-  5. Memory    → Ambil memory summary dari ChromaDB (collection 'chat_memory')
-                 jika ada, inject ke system prompt sebelum LLM
-  6. LLM       → Groq API via streaming SSE
-
-Memory System:
-  - Disimpan di ChromaDB collection 'chat_memory' terpisah dari 'konten_isi'
-  - Satu dokumen per Q&A pair, id unik = 'memory_{chat_id}_{detail_id}'
-  - Disimpan oleh _save_memory_entry di service/chats.py setelah setiap response
-  - Pipeline membaca memory via similarity search (get_memory) — hanya dari chat_id yang sama
-
-Identity System:
-  - Disimpan di ChromaDB collection 'user_identity' terpisah dari 'chat_memory'
-  - Satu dokumen per user, id unik = 'identity_{user_id}'
-  - Disimpan oleh save_identity() (dipanggil dari chats.py saat _rag_worker)
-  - Pipeline membaca identity via get_identity() dan menggabungkannya ke blok
-    memory sebelum diinjek ke prompt — nama user TIDAK pernah masuk base prompt
-  - Identity persisten lintas topic — tidak ikut terhapus saat topic dihapus
-
-Hardware: Core 5 210H · 16 GB RAM · RTX 5050 8 GB VRAM
-  - Embedding  → GPU/CPU  (multilingual-e5-large  ~560 MB RAM)
-  - Reranker   → GPU/CPU  (bge-reranker-v2-m3     ~560 MB RAM)
-  - LLM        → Groq API (tidak pakai VRAM lokal — VRAM bebas penuh)
-
-Env vars yang dibutuhkan:
-  GROQ_API_KEY  → API key Groq
-"""
-
 import os
 import queue as _queue
 import logging
@@ -48,7 +8,6 @@ from dataclasses import dataclass
 
 import torch
 from groq import Groq
-# transformers dipakai untuk model lokal HuggingFace (folder hasil clone HF Hub)
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer as AutoTok,
@@ -66,8 +25,7 @@ from transformers import (
     pipeline as hf_pipeline,
 )
 
-from config import CONFIG, PROMPTS, set_llm_mode, list_local_models
-
+from config import CONFIG, PROMPTS, set_llm_mode, list_local_models, GROQ_MODEL_SAFE_TOKEN_BUDGET, FIXED_OVERHEAD_TOKENS
 load_dotenv()
 
 ############################################################
@@ -126,9 +84,6 @@ def _setup_logger() -> logging.Logger:
 
 
 log = _setup_logger()
-
-
-
 
 ############################################################
 # DATA STRUCTURES
@@ -239,64 +194,23 @@ class RAGModels:
         )
         log.info("[2/4] Reranker siap  (%.2fs)", time.perf_counter() - _t)
 
-        # ── 3. LLM — Groq API atau Local GGUF ───────────────────────────────
-        llm_mode = CONFIG.get("llm_mode", "groq")
-        self.llm_mode = llm_mode
-
-        if llm_mode == "local":
-            local_path = CONFIG.get("local_llm_path")
-            if not local_path or not os.path.isdir(local_path):
-                raise FileNotFoundError(
-                    f"Folder model lokal tidak ditemukan: {local_path!r}. "
-                    "Pastikan folder hasil clone HuggingFace ada di folder model/."
-                )
-
-            log.info("[3/4] Local LLM (HuggingFace): %s → GPU", local_path)
-            _t = time.perf_counter()
-
-            # ── Tokenizer ────────────────────────────────────────────────────
-            self.local_tokenizer = AutoTok.from_pretrained(
-                local_path,
-                local_files_only=True,
-                trust_remote_code=True,
+        self.llm_mode = "groq"
+        log.info("[3/4] Groq API client → model=%s", CONFIG["groq_model"])
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            raise EnvironmentError(
+                "GROQ_API_KEY tidak ditemukan di environment. "
+                "Set environment variable sebelum menjalankan server."
             )
-            # Pastikan pad_token ada (beberapa model tidak punya)
-            if self.local_tokenizer.pad_token is None:
-                self.local_tokenizer.pad_token = self.local_tokenizer.eos_token
-
-            # ── Model — load ke GPU dengan bfloat16 ──────────────────────────
-            # bfloat16 hemat VRAM ~2× dibanding float32, akurasi cukup untuk inferensi
-            # device_map="cuda" → semua layer ke GPU (monopoli VRAM untuk LLM lokal)
-            self.local_llm = AutoModelForCausalLM.from_pretrained(
-                local_path,
-                local_files_only=True,
-                trust_remote_code=True,
-                torch_dtype=torch.bfloat16,
-                device_map="cuda" if torch.cuda.is_available() else "cpu",
-            )
-            self.local_llm.eval()
-
-            self.groq_client = None
-            log.info("[3/4] Local LLM siap  (%.2fs)", time.perf_counter() - _t)
-        else:
-            log.info("[3/4] Groq API client → model=%s", CONFIG["groq_model"])
-            api_key = os.environ.get("GROQ_API_KEY")
-            if not api_key:
-                raise EnvironmentError(
-                    "GROQ_API_KEY tidak ditemukan di environment. "
-                    "Set environment variable sebelum menjalankan server."
-                )
-            self.groq_client = Groq(api_key=api_key)
-            self.local_llm = None
-            log.info("[3/4] Groq client siap.")
+        self.groq_client = Groq(api_key=api_key)
+        self.local_llm       = None
+        self.local_tokenizer = None
+        log.info("[3/4] Groq client siap.")
 
         # ── 4. NLP — IndoBERT (ID) & BERT-NER (EN) ───────────────────────────
         log.info("[4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...")
         _t = time.perf_counter()
 
-        # IndoBERT — MaskedLM untuk:
-        #   a) koreksi typo via fill-mask (OOV token di-mask → predict)
-        #   b) ekstraksi keyword via tokenisasi sub-kata
         self.nlp_id_tokenizer = AutoTokenizer.from_pretrained(
             CONFIG["nlp_id_model"]
         )
@@ -305,10 +219,9 @@ class RAGModels:
             model=CONFIG["nlp_id_model"],
             tokenizer=CONFIG["nlp_id_model"],
             device=CONFIG["nlp_device"],
-            top_k=5,   # ambil 5 kandidat per token yang di-mask
+            top_k=5,  
         )
 
-        # BERT-NER — NER Inggris (dslim/bert-base-NER)
         self.nlp_en_pipeline = hf_pipeline(
             "ner",
             model=CONFIG["nlp_en_model"],
@@ -320,8 +233,6 @@ class RAGModels:
         log.info("[4/4] NLP siap  (%.2fs)", time.perf_counter() - _t)
 
         log.info("✓ Semua model berhasil dimuat.")
-
-    # ── Helpers ───────────────────────────────────────────────────────────────
 
     def get_embedding(self, text: str) -> List[float]:
         """
@@ -1029,19 +940,27 @@ class RAGPipeline:
 
             max_words = CONFIG["memory_summary_max_words"]
 
-            # ── Bangun prompt summarizer dari PROMPTS ─────────────────────────
-            if previous_summary:
+            # Truncate agar total prompt summarizer tidak meledak
+            _max_answer_chars  = CONFIG["memory_summary_max_tokens"] * 3   # ~1536 char untuk 512 token
+            _max_summary_chars = CONFIG["memory_summary_max_tokens"] * 2   # ~1024 char
+            _max_question_chars = 400
+
+            answer_trunc   = answer.strip()[:_max_answer_chars]
+            question_trunc = question.strip()[:_max_question_chars]
+            prev_trunc     = previous_summary[:_max_summary_chars] if previous_summary else ""
+
+            if prev_trunc:
                 summary_prompt = PROMPTS["memory_summary_update"].format(
                     max_words=max_words,
-                    previous_summary=previous_summary,
-                    question=question.strip(),
-                    answer=answer.strip(),
+                    previous_summary=prev_trunc,
+                    question=question_trunc,
+                    answer=answer_trunc,
                 )
             else:
                 summary_prompt = PROMPTS["memory_summary_new"].format(
                     max_words=max_words,
-                    question=question.strip(),
-                    answer=answer.strip(),
+                    question=question_trunc,
+                    answer=answer_trunc,
                 )
 
             # ── Panggil LLM untuk summarization ──────────────────────────────
@@ -1050,13 +969,42 @@ class RAGPipeline:
                 "prev_summary=%d char",
                 chat_id, detail_id, len(previous_summary),
             )
-            summary_response = self.models.groq_client.chat.completions.create(
-                model=CONFIG["memory_summary_model"],
-                messages=[{"role": "user", "content": summary_prompt}],
-                max_tokens=CONFIG["memory_summary_max_tokens"],
-                temperature=0.3,
-            )
-            new_summary = summary_response.choices[0].message.content.strip()
+            # Summarizer ikut mode LLM yang aktif (groq atau local)
+            if self.models.llm_mode == "groq":
+                # ── Groq API ──────────────────────────────────────────────────────
+                summary_response = self.models.groq_client.chat.completions.create(
+                    model=CONFIG["memory_summary_model"],
+                    messages=[{"role": "user", "content": summary_prompt}],
+                    max_tokens=CONFIG["memory_summary_max_tokens"],
+                    temperature=0.3,
+                )
+                new_summary = summary_response.choices[0].message.content.strip()
+            else:
+                # ── Local LLM ─────────────────────────────────────────────────────
+                # Kumpulkan seluruh token dari generator (summarizer tidak perlu streaming)
+                tokenizer = self.models.local_tokenizer
+                model     = self.models.local_llm
+
+                inputs = tokenizer(
+                    summary_prompt,
+                    return_tensors="pt",
+                    truncation=True,
+                    max_length=2048,
+                ).input_ids.to(model.device)
+
+                with torch.no_grad():
+                    output_ids = model.generate(
+                        inputs,
+                        max_new_tokens=CONFIG["memory_summary_max_tokens"],
+                        temperature=0.3,
+                        do_sample=True,
+                        pad_token_id=tokenizer.pad_token_id,
+                        eos_token_id=tokenizer.eos_token_id,
+                    )
+
+                # Potong token input — ambil hanya bagian yang di-generate
+                generated = output_ids[0][inputs.shape[-1]:]
+                new_summary = tokenizer.decode(generated, skip_special_tokens=True).strip()
 
             # ── Upsert summary ke ChromaDB (overwrite entry lama) ─────────────
             summary_embedding = self.models.get_embedding(new_summary)
@@ -1103,10 +1051,10 @@ class RAGPipeline:
             log.exception(
                 "[Memory] Gagal update memory chat_id=%d detail_id=%d",
                 chat_id, detail_id,
+
             )
 
     # ── Social Pipeline ───────────────────────────────────────────────────────
-
     def process_social_query(
         self,
         query:      str,
@@ -1114,27 +1062,11 @@ class RAGPipeline:
         stop_event: threading.Event = None,
         user_id:    int | None = None,
     ) -> RAGResponse:
-        """
-        Pipeline social — pure LLM dengan few-shot prompting via Groq API.
-
-        Menggunakan format messages OpenAI-style dengan system role
-        yang berisi persona + few-shot examples, sehingga model langsung
-        tahu pola output yang diharapkan.
-
-        chat_id (opsional): jika ada, memory episodik diambil via similarity
-        search dan diinjekt ke system prompt — memungkinkan bot mengingat
-        informasi personal seperti nama pengguna antar pesan.
-
-        user_id (opsional): digunakan oleh get_memory() untuk menyertakan
-        blok identitas user (dari collection 'user_identity') ke dalam memory.
-        Nama user TIDAK diinjek ke base prompt — hanya lewat memory.
-        """
         t_start = time.perf_counter()
         lang    = self._detect_language(query)
+        tier    = self._get_model_tier()
 
         # ── Ambil memory + identitas user jika tersedia ───────────────────────
-        # get_memory() akan menggabungkan identity (user_identity) +
-        # running summary + recent window menjadi satu blok memory.
         memory_text: str | None = None
         if chat_id is not None:
             memory_text = self.get_memory(chat_id, query, user_id=user_id)
@@ -1143,33 +1075,41 @@ class RAGPipeline:
             else:
                 log.debug("[Social] Belum ada memory untuk chat_id=%d", chat_id)
 
-        # ── Bangun blok memory dari PROMPTS ──────────────────────────────────
-        # Tidak ada lagi user_greeting — nama user sudah ada di blok memory
-        # jika identity sudah tersimpan di collection 'user_identity'.
+        # ── Pilih prompt berdasarkan tier model ───────────────────────────────
+        # large  → few-shot penuh (model besar mampu memisahkan contoh dari instruksi)
+        # medium / small → prompt ringkas (model kecil cenderung mereproduksi contoh)
+        use_compact = tier in ("small", "medium")
+
         if lang == "id":
             memory_section = (
                 PROMPTS["social_memory_block_id"].format(memory=memory_text)
                 if memory_text else ""
             )
-            system_msg = PROMPTS["social_system_id"].format(
-                memory_section=memory_section,
-            )
+            prompt_key = "social_system_id_local" if use_compact else "social_system_id"
+            system_msg = PROMPTS[prompt_key].format(memory_section=memory_section)
         else:
             memory_section = (
                 PROMPTS["social_memory_block_en"].format(memory=memory_text)
                 if memory_text else ""
             )
-            system_msg = PROMPTS["social_system_en"].format(
-                memory_section=memory_section,
-            )
+            prompt_key = "social_system_en_local" if use_compact else "social_system_en"
+            system_msg = PROMPTS[prompt_key].format(memory_section=memory_section)
 
         messages = [
             {"role": "system", "content": system_msg},
             {"role": "user",   "content": query},
         ]
 
-        log.info("[Social] Groq few-shot — lang=%s  memory=%s  user_id=%s  query=%r",
-                 lang, "ya" if memory_text else "tidak", user_id or "-", query[:60])
+        log.info(
+            "[Social] tier=%s  model=%s  prompt=%s  lang=%s  memory=%s  user_id=%s  query=%r",
+            tier,
+            CONFIG.get("groq_model", "?"),
+            prompt_key,
+            lang,
+            "ya" if memory_text else "tidak",
+            user_id or "-",
+            query[:60],
+        )
 
         answer_gen = self._generate_stream(
             messages,
@@ -1521,73 +1461,135 @@ class RAGPipeline:
         en_score = len(words & en_markers)
         return "en" if en_score >= 2 else "id"
 
+    @staticmethod
+    def _get_model_tier() -> str:
+        model = CONFIG.get("groq_model", "").lower()
+
+        # ── Deteksi ukuran dari nama model ────────────────────────────────────
+        # Pola: angka sebelum 'b' (misal "70b", "3b", "8b", "32b")
+        import re
+        matches = re.findall(r"(\d+)b", model)
+        if matches:
+            size = max(int(m) for m in matches)
+            if size <= 4:
+                return "small"
+            if size <= 40:
+                return "medium"
+            return "large"
+
+        # Fallback keyword-based
+        if any(k in model for k in ("70b", "72b", "8x22b", "mixtral")):
+            return "large"
+        if any(k in model for k in ("32b",)):
+            return "large"
+        if any(k in model for k in ("7b", "8b", "12b", "13b")):
+            return "medium"
+        if any(k in model for k in ("3b", "1b")):
+            return "small"
+
+        return "large"  # default ke large jika tidak dikenali
+
     def _build_messages(
-            self,
-            query:  str,
-            chunks: List[EnrichedChunk],
-            lang:   str = None,
-            memory: str | None = None,
-        ) -> List[Dict]:
-            """
-            Bangun messages list untuk knowledge pipeline.
-            Prompt diambil dari PROMPTS (config.py) — tidak ada string literal di sini.
+        self,
+        query:  str,
+        chunks: List[EnrichedChunk],
+        lang:   str = None,
+        memory: str | None = None,
+    ) -> List[Dict]:
+        tier      = self._get_model_tier()
+        safe_budget = GROQ_MODEL_SAFE_TOKEN_BUDGET.get(CONFIG["groq_model"], 4_800)
+        _usable = safe_budget - FIXED_OVERHEAD_TOKENS
+        max_chars = min(int(_usable * 0.30 * 4), CONFIG["context_max_chars"])
 
-            Nama user TIDAK dioper ke sini — sudah masuk lewat blok memory
-            yang disiapkan oleh get_memory() (gabungan identity + chat_memory).
-            """
-            max_chars     = CONFIG["context_max_chars"]
-            context_parts: List[str] = []
-            used_chars    = 0
+        # Kurangi context window untuk model kecil/medium
+        if tier == "small":
+            max_chars = min(max_chars, 3_000)   # ~750 token untuk context
+        elif tier == "medium":
+            max_chars = min(max_chars, 6_000)   # ~1500 token untuk context
 
-            for i, c in enumerate(chunks, 1):
-                part = f"[{i}] {c.sub_judul}\n{c.context_text}"
-                if used_chars + len(part) > max_chars:
-                    remaining = max_chars - used_chars
-                    if remaining > 200:
-                        context_parts.append(part[:remaining] + "…")
-                    break
-                context_parts.append(part)
-                used_chars += len(part)
+        log.info(
+            "[BuildMessages] tier=%s  context_max_chars(CONFIG)=%d  max_chars(efektif)=%d",
+            tier, CONFIG["context_max_chars"], max_chars,
+        )
+        # large → pakai max_chars penuh dari CONFIG
 
-            context_str = "\n\n".join(context_parts)
+        context_parts: List[str] = []
+        used_chars = 0
 
-            source_lines = [
-                f"[{i}] {c.judul_jurnal} — {c.penulis} ({c.tanggal_rilis})"
-                + (f"  DOI: {c.doi}" if c.doi else "")
-                + f"  hal. {c.halaman}"
-                for i, c in enumerate(chunks, 1)
-            ]
-            source_str = "\n".join(source_lines)
+        for i, c in enumerate(chunks, 1):
+            part = f"[{i}] {c.sub_judul}\n{c.context_text}"
+            if used_chars + len(part) > max_chars:
+                remaining = max_chars - used_chars
+                if remaining > 200:
+                    context_parts.append(part[:remaining] + "…")
+                break
+            context_parts.append(part)
+            used_chars += len(part)
 
-            lang = lang if lang is not None else self._detect_language(query)
+        context_str = "\n\n".join(context_parts)
 
-            if lang == "id":
-                memory_section = (
-                    PROMPTS["knowledge_memory_block_id"].format(memory=memory)
-                    if memory else ""
-                )
-                system_content = PROMPTS["knowledge_system_id"].format(
-                    memory_section=memory_section,
-                    context_str=context_str,
-                    source_str=source_str,
-                )
-                question_label = "Pertanyaan"
-            else:
-                memory_section = (
-                    PROMPTS["knowledge_memory_block_en"].format(memory=memory)
-                    if memory else ""
-                )
-                system_content = PROMPTS["knowledge_system_en"].format(
-                    memory_section=memory_section,
-                    context_str=context_str,
-                    source_str=source_str,
-                )
-                question_label = "Question"
+        source_lines = [
+            f"[{i}] {c.judul_jurnal} — {c.penulis} ({c.tanggal_rilis})"
+            + (f"  DOI: {c.doi}" if c.doi else "")
+            + f"  hal. {c.halaman}"
+            for i, c in enumerate(chunks, 1)
+        ]
+        source_str = "\n".join(source_lines)
 
-            return [
-                {"role": "system", "content": system_content},
-                {"role": "user",   "content": f"{question_label}: {query}"},
-            ]
+        lang = lang if lang is not None else self._detect_language(query)
+
+        if lang == "id":
+            _max_memory_chars = 1_200  # ~300 token, cukup untuk context singkat
+            if memory and len(memory) > _max_memory_chars:
+                memory = memory[:_max_memory_chars] + "…"
+                log.debug("[BuildMessages] Memory dipotong ke %d char", _max_memory_chars)
+            memory_section = (
+                PROMPTS["knowledge_memory_block_id"].format(memory=memory)
+                if memory else ""
+            )
+            # Pilih prompt key berdasarkan tier model
+            prompt_key = {
+                "small":  "knowledge_system_id_local",   # prompt ringkas
+                "medium": "knowledge_system_id_local",   # sama dengan small — padat
+                "large":  "knowledge_system_id",          # prompt penuh + few-shot
+            }[tier]
+            system_content = PROMPTS[prompt_key].format(
+                memory_section=memory_section,
+                context_str=context_str,
+                source_str=source_str,
+            )
+            question_label = "Pertanyaan"
+        else:
+            memory_section = (
+                PROMPTS["knowledge_memory_block_en"].format(memory=memory)
+                if memory else ""
+            )
+            prompt_key = {
+                "small":  "knowledge_system_en_local",
+                "medium": "knowledge_system_en_local",
+                "large":  "knowledge_system_en",
+            }[tier]
+            system_content = PROMPTS[prompt_key].format(
+                memory_section=memory_section,
+                context_str=context_str,
+                source_str=source_str,
+            )
+            question_label = "Question"
+
+        log.debug(
+            "[BuildMessages] tier=%s  model=%s  prompt=%s  lang=%s  context=%d char  memory=%s",
+            tier,
+            CONFIG.get("groq_model", "?"),
+            prompt_key,
+            lang,
+            len(context_str),
+            "ya" if memory else "tidak",
+        )
+
+        return [
+            {"role": "system", "content": system_content},
+            {"role": "user",   "content": f"{question_label}: {query}"},
+        ]
 
     def _generate_stream(
         self,
@@ -1855,17 +1857,36 @@ def reload_with_model(mode: str, local_llm_path: str = None) -> None:
         def api_models():
             return {"models": list_local_models()}
     """
+    # log.info(
+    #     "reload_with_model() → mode=%r  path=%r",
+    #     mode, local_llm_path,
+    # )
+    # set_llm_mode(mode, local_llm_path)  # update CONFIG + device placement
+    # reset_pipeline()                     # rebuild RAGModels + RAGPipeline
+    # log.info(
+    #     "reload_with_model() selesai — "
+    #     "embedding=%s  reranker=%s  nlp=%s  llm=%s",
+    #     CONFIG["embedding_device"],
+    #     CONFIG["reranker_device"],
+    #     "cuda" if CONFIG["nlp_device"] >= 0 else "cpu",
+    #     CONFIG.get("local_llm_path") or CONFIG["groq_model"],
+    # )
+
+    if mode != "groq":
+        raise ValueError(
+            "Mode 'local' dinonaktifkan. Hanya mode 'groq' yang didukung saat ini."
+        )
     log.info(
-        "reload_with_model() → mode=%r  path=%r",
-        mode, local_llm_path,
+        "reload_with_model() → mode=groq  model=%s",
+        CONFIG.get("groq_model"),
     )
-    set_llm_mode(mode, local_llm_path)  # update CONFIG + device placement
-    reset_pipeline()                     # rebuild RAGModels + RAGPipeline
+    set_llm_mode("groq", None)
+    reset_pipeline()
     log.info(
         "reload_with_model() selesai — "
-        "embedding=%s  reranker=%s  nlp=%s  llm=%s",
+        "embedding=%s  reranker=%s  nlp=%s  llm=groq(%s)",
         CONFIG["embedding_device"],
         CONFIG["reranker_device"],
         "cuda" if CONFIG["nlp_device"] >= 0 else "cpu",
-        CONFIG.get("local_llm_path") or CONFIG["groq_model"],
+        CONFIG["groq_model"],
     )
