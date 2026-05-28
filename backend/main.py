@@ -6,8 +6,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from controller.users import router as users_router
-from controller.chats import router as chats_router
+from controller.controller_users import router as users_router
+from controller.controller_chats import router as chats_router
 from pipeline import get_rag_pipeline
 
 logging.basicConfig(

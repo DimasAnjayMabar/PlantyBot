@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import logging
 from database import get_db
-from service.users import UserService
+from service.service_users import UserService
 from validation.users import (
     RegisterSchema,
     LoginSchema,

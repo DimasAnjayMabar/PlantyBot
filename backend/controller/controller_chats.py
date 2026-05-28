@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
 from middleware.auth import get_current_session
 from models import UserAuth, ChatDetail, Chat
-from service.chats import ChatService, KnowledgeService, _get_or_create_event, _cleanup_event, _signal_stop
+from service.service_chats import ChatService, KnowledgeService, _get_or_create_event, _cleanup_event, _signal_stop
 from validation.chats import (
     RenameTitleSchema,
     SendMessageSchema,
@@ -679,3 +679,25 @@ async def set_active_model(
             status_code=500,
             detail=f"Gagal mengganti model: {str(e)}",
         )
+
+@router.get("/models/active", status_code=status.HTTP_200_OK)
+def get_active_model(
+    current_session: UserAuth = Depends(get_current_session),
+):
+    """
+    Mendapatkan model Groq yang sedang aktif beserta mode-nya.
+    Endpoint ini digunakan oleh Flutter untuk sinkronisasi state setelah hot reload.
+    """
+    from config import CONFIG
+    
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "success": True,
+            "message": "Model aktif berhasil diambil.",
+            "data": {
+                "model_id": CONFIG.get("groq_model", "llama-3.3-70b-versatile"),
+                "mode": CONFIG.get("llm_mode", "groq"),
+            }
+        },
+    )

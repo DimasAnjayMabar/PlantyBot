@@ -7161,3 +7161,98 @@ Traceback (most recent call last):
     raise self._make_status_error_from_response(err.response) from None
 groq.APIStatusError: Error code: 413 - {'error': {'message': 'Request too large for model `qwen/qwen3-32b` in organization `org_01kgct53n0ewvtm1naa3z49k6q` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Requested 6978, please reduce your message size and try again. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
 2026-05-28 19:29:37  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 0 chunk  0.454s
+2026-05-28 21:56:40  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-05-28 21:56:40  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-05-28 21:56:40  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-05-28 21:56:40  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-05-28 21:56:40  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-05-28 21:57:05  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (24.62s)
+2026-05-28 21:57:05  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-05-28 21:57:22  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (16.71s)
+2026-05-28 21:57:22  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-05-28 21:57:23  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-05-28 21:57:23  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-05-28 21:57:33  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (9.98s)
+2026-05-28 21:57:33  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-05-28 21:57:33  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-05-28 21:57:38  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-05-28 21:57:38  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-05-28 21:57:38  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-05-28 22:40:35  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() → mode=groq  model=llama-3.1-8b-instant
+2026-05-28 22:40:35  [33mWARNING [0m  [38;5;245magribot[0m  reset_pipeline() dipanggil — rebuild dari nol.
+2026-05-28 22:40:36  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-05-28 22:40:36  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-05-28 22:40:36  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.1-8b-instant)
+2026-05-28 22:40:36  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-05-28 22:40:50  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (14.70s)
+2026-05-28 22:40:50  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-05-28 22:41:04  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (13.29s)
+2026-05-28 22:41:04  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.1-8b-instant
+2026-05-28 22:41:05  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-05-28 22:41:05  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-05-28 22:41:13  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (8.32s)
+2026-05-28 22:41:13  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-05-28 22:41:13  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-05-28 22:41:14  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-05-28 22:41:14  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-05-28 22:41:14  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-05-28 22:41:14  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() selesai — embedding=cuda  reranker=cuda  nlp=cuda  llm=groq(llama-3.1-8b-instant)
+2026-05-28 22:57:47  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-05-28 22:57:47  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-05-28 22:57:47  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-05-28 22:57:47  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-05-28 22:57:47  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-05-28 22:58:09  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (21.94s)
+2026-05-28 22:58:09  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-05-28 22:58:31  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (21.96s)
+2026-05-28 22:58:31  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-05-28 22:58:34  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-05-28 22:58:34  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-05-28 22:58:44  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (9.84s)
+2026-05-28 22:58:44  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-05-28 22:58:44  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-05-28 22:58:48  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-05-28 22:58:48  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-05-28 22:58:48  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-05-28 23:08:35  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-05-28 23:08:35  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-05-28 23:08:35  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-05-28 23:08:35  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-05-28 23:08:35  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-05-28 23:08:49  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (13.54s)
+2026-05-28 23:08:49  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-05-28 23:08:58  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (9.08s)
+2026-05-28 23:08:58  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-05-28 23:08:58  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-05-28 23:08:58  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-05-28 23:09:05  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (6.33s)
+2026-05-28 23:09:05  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-05-28 23:09:05  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-05-28 23:09:08  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-05-28 23:09:08  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-05-28 23:09:08  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-05-28 23:14:16  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-05-28 23:14:16  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-05-28 23:14:16  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-05-28 23:14:16  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-05-28 23:14:16  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-05-28 23:14:29  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (13.30s)
+2026-05-28 23:14:29  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-05-28 23:14:37  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (7.27s)
+2026-05-28 23:14:37  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-05-28 23:14:37  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-05-28 23:14:37  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-05-28 23:14:43  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (5.42s)
+2026-05-28 23:14:43  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-05-28 23:14:43  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-05-28 23:14:45  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-05-28 23:14:45  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-05-28 23:14:45  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-05-28 23:23:24  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() → mode=groq  model=llama-3.1-8b-instant
+2026-05-28 23:23:24  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() selesai — embedding=cuda  reranker=cuda  nlp=cuda  llm=groq(llama-3.1-8b-instant)
+2026-05-28 23:23:35  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() → mode=groq  model=llama-3.1-8b-instant
+2026-05-28 23:23:35  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() selesai — embedding=cuda  reranker=cuda  nlp=cuda  llm=groq(llama-3.1-8b-instant)
+2026-05-28 23:23:47  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() → mode=groq  model=llama-3.1-8b-instant
+2026-05-28 23:23:47  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() selesai — embedding=cuda  reranker=cuda  nlp=cuda  llm=groq(llama-3.1-8b-instant)
+2026-05-28 23:23:51  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() → mode=groq  model=meta-llama/llama-4-scout-17b-16e-instruct
+2026-05-28 23:23:51  [36mINFO    [0m  [38;5;245magribot[0m  reload_with_model() selesai — embedding=cuda  reranker=cuda  nlp=cuda  llm=groq(meta-llama/llama-4-scout-17b-16e-instruct)
