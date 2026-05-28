@@ -26,6 +26,43 @@ const _kBaseUrl = 'http://localhost:8000';
 const _kTokenRefreshInterval = Duration(minutes: 25);
 
 // ---------------------------------------------------------------------------
+// Model Preference Storage - Menyimpan model yang dipilih user
+// ---------------------------------------------------------------------------
+
+class ModelPreferenceStorage {
+  static const String _keySelectedModel = 'selected_model_id';
+  static const String _keySelectedMode = 'selected_llm_mode'; // 'groq' or 'local'
+  
+  /// Simpan model yang dipilih
+  static Future<void> saveSelectedModel(String modelId) async {
+    await TokenStorage.write(key: _keySelectedModel, value: modelId);
+    print('💾 Model preference saved: $modelId');
+  }
+  
+  /// Ambil model yang tersimpan
+  static Future<String?> getSelectedModel() async {
+    return await TokenStorage.read(key: _keySelectedModel);
+  }
+  
+  /// Simpan mode LLM (groq/local)
+  static Future<void> saveSelectedMode(String mode) async {
+    await TokenStorage.write(key: _keySelectedMode, value: mode);
+    print('💾 Mode preference saved: $mode');
+  }
+  
+  /// Ambil mode yang tersimpan
+  static Future<String?> getSelectedMode() async {
+    return await TokenStorage.read(key: _keySelectedMode);
+  }
+  
+  /// Hapus semua preference model
+  static Future<void> clearModelPreference() async {
+    await TokenStorage.delete(key: _keySelectedModel);
+    await TokenStorage.delete(key: _keySelectedMode);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Token Storage — Abstraction Layer
 //
 // Web/Chrome  → SharedPreferences (localStorage) — persisten lintas restart browser
@@ -211,6 +248,10 @@ class ChatService {
   String? _accessToken;
   int? _userId;
   Timer? _tokenTimer;
+  
+  // ── Model State ──────────────────────────────────────────────────────────
+  String? _currentModelId;
+  String? _currentMode; // 'groq' or 'local'
 
   // Instance AudioPlayer & State Tracker untuk memutar TTS
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -219,14 +260,20 @@ class ChatService {
 
   String? get accessToken => _accessToken;
   int? get userId => _userId;
+  String? get currentModelId => _currentModelId;
 
   Map<String, dynamic> get _authHeader => {'Authorization': 'Bearer $_accessToken'};
 
   // Callbacks untuk UI
   final VoidCallback? onForceLogout;
   final void Function(String? token)? onTokenUpdated;
+  final void Function(String? modelId)? onModelChanged; // ← callback baru
 
-  ChatService({this.onForceLogout, this.onTokenUpdated}) {
+  ChatService({
+    this.onForceLogout,
+    this.onTokenUpdated,
+    this.onModelChanged,
+  }) {
     // Memantau status player agar tombol kembali normal jika audio selesai/stop otomatis
     _audioPlayer.onPlayerComplete.listen((_) {
       playingTtsId.value = null;
@@ -236,6 +283,128 @@ class ChatService {
         playingTtsId.value = null;
       }
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Model Preference Methods
+  // -------------------------------------------------------------------------
+
+  /// Inisialisasi model preference dari storage
+  Future<void> initModelPreference() async {
+    try {
+      // Ambil dari storage
+      _currentModelId = await ModelPreferenceStorage.getSelectedModel();
+      _currentMode = await ModelPreferenceStorage.getSelectedMode();
+      
+      if (_currentModelId != null && _currentMode != null) {
+        print('🔄 Loading saved model preference: mode=$_currentMode, model=$_currentModelId');
+        
+        // Sinkronkan dengan backend
+        final success = await _setModelInternal(_currentMode!, path: _currentModelId);
+        if (success) {
+          print('✅ Model preference synced with backend');
+          onModelChanged?.call(_currentModelId);
+        } else {
+          print('⚠️ Failed to sync model with backend, using saved preference anyway');
+        }
+      } else {
+        // Jika belum ada preference, gunakan default dari backend
+        await _syncModelFromBackend();
+      }
+    } catch (e) {
+      print('❌ Error loading model preference: $e');
+    }
+  }
+
+  /// Sync model dari backend (untuk memastikan konsistensi)
+  Future<void> _syncModelFromBackend() async {
+    try {
+      final res = await _dio.get(
+        '/models/active',
+        options: Options(headers: _authHeader),
+      );
+      if (res.data['success'] == true) {
+        final modelId = res.data['data']['model_id'] as String;
+        final mode = res.data['data']['mode'] as String;
+        
+        _currentModelId = modelId;
+        _currentMode = mode;
+        
+        // Simpan ke storage
+        await ModelPreferenceStorage.saveSelectedModel(modelId);
+        await ModelPreferenceStorage.saveSelectedMode(mode);
+        
+        print('✅ Synced model from backend: mode=$mode, model=$modelId');
+        onModelChanged?.call(modelId);
+      }
+    } catch (e) {
+      print('⚠️ Failed to sync model from backend: $e');
+      // Fallback ke default
+      _currentModelId = 'llama-3.3-70b-versatile';
+      _currentMode = 'groq';
+    }
+  }
+
+  /// Internal method untuk set model tanpa menyimpan ke storage (untuk sync)
+  Future<bool> _setModelInternal(String mode, {String? path}) async {
+    try {
+      final resp = await _dio.post(
+        '/models/set-model',
+        data: {'model_id': path},
+        options: Options(headers: _authHeader)
+      );
+      return resp.data['success'] == true;
+    } catch (e) {
+      print('❌ Internal set model failed: $e');
+      return false;
+    }
+  }
+
+  /// Set model dan simpan ke storage
+  Future<bool> setModel(String mode, {String? path}) async {
+    try {
+      final resp = await _dio.post(
+        '/models/set-model',
+        data: {'model_id': path},
+        options: Options(headers: _authHeader)
+      );
+      
+      if (resp.data['success'] == true) {
+        // Simpan ke memory
+        _currentModelId = path;
+        _currentMode = mode;
+        
+        // Simpan ke storage
+        if (path != null) {
+          await ModelPreferenceStorage.saveSelectedModel(path);
+        }
+        await ModelPreferenceStorage.saveSelectedMode(mode);
+        
+        print('✅ Model changed successfully: mode=$mode, model=$path');
+        onModelChanged?.call(path);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Set model failed: $e');
+      return false;
+    }
+  }
+
+  /// Get current active model
+  Future<String?> getCurrentModel() async {
+    if (_currentModelId != null) return _currentModelId;
+    
+    // Coba sync dari backend
+    await _syncModelFromBackend();
+    return _currentModelId;
+  }
+
+  /// Get current mode
+  Future<String?> getCurrentMode() async {
+    if (_currentMode != null) return _currentMode;
+    await _syncModelFromBackend();
+    return _currentMode;
   }
 
   // -------------------------------------------------------------------------
@@ -278,9 +447,11 @@ class ChatService {
     _accessToken = accessToken;
     _userId = userId;
     _startTokenTimer();
+    
+    // Setelah login, sync model preference
+    await initModelPreference();
   }
 
-  // Di dalam class ChatService, update method _startTokenTimer dan _silentRefresh
   void _startTokenTimer() {
     _tokenTimer?.cancel();
     print('🔄 Starting token refresh timer with interval: ${_kTokenRefreshInterval.inMinutes} minutes');
@@ -307,7 +478,7 @@ class ChatService {
         data: {'refresh_token': rt},
         options: Options(
           headers: _authHeader,
-          validateStatus: (status) => status! < 500, // Accept 401/403 for handling
+          validateStatus: (status) => status! < 500,
         ),
       );
       
@@ -325,11 +496,8 @@ class ChatService {
         onTokenUpdated?.call(_accessToken);
         
         print('✅ [${DateTime.now()}] Token refreshed successfully!');
-        print('   New access token: ${newAccessToken.substring(0, 20)}...');
-        print('   New refresh token: ${newRefreshToken.substring(0, 20)}...');
       } else {
         print('❌ [${DateTime.now()}] Refresh failed with status: ${res.statusCode}');
-        print('   Response: ${res.data}');
         
         if (res.statusCode == 401 || res.statusCode == 403) {
           print('⚠️ Token expired or invalid, forcing logout');
@@ -337,13 +505,7 @@ class ChatService {
         }
       }
     } on DioException catch (e) {
-      print('❌ [${DateTime.now()}] DioException during refresh:');
-      print('   Type: ${e.type}');
-      print('   Message: ${e.message}');
-      if (e.response != null) {
-        print('   Status: ${e.response?.statusCode}');
-        print('   Data: ${e.response?.data}');
-      }
+      print('❌ [${DateTime.now()}] DioException during refresh: ${e.message}');
       
       if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
         print('⚠️ Token expired or invalid, forcing logout');
@@ -370,8 +532,11 @@ class ChatService {
   Future<void> forceLogout() async {
     _tokenTimer?.cancel();
     await TokenStorage.deleteAll();
+    await ModelPreferenceStorage.clearModelPreference(); // ← hapus juga model preference
     _accessToken = null;
     _userId = null;
+    _currentModelId = null;
+    _currentMode = null;
     await _audioPlayer.stop();
     playingTtsId.value = null;
   }
@@ -550,7 +715,6 @@ class ChatService {
         ),
       );
 
-      // Jika pengguna menekan tombol stop SEBELUM API membalas, jangan putar audionya
       if (_currentTtsRequestDetailId != detailId) return;
 
       final List<int> audioData = response.data;
@@ -629,9 +793,8 @@ class ChatService {
   // Model Selector Methods
   // -------------------------------------------------------------------------
 
-  /// Ambil daftar model lokal dari backend.
-  /// Setiap entry: {"name", "path", "type"} — type = "folder" | "gguf"
-  Future<List<Map<String, dynamic>>> getLocalModels() async {
+  /// Ambil daftar model Groq yang tersedia dari backend
+  Future<List<Map<String, dynamic>>> getAvailableModels() async {
     try {
       final resp = await _dio.get('/models', options: Options(headers: _authHeader));
       final data = resp.data;
@@ -641,29 +804,35 @@ class ChatService {
         );
       }
       return [];
-    } catch (_) {
+    } catch (e) {
+      print('❌ Error getting available models: $e');
       return [];
     }
   }
 
-  /// Ganti mode LLM di backend.
-  /// [mode]  : "groq" atau "local"
-  /// [path]  : path absolut ke folder model atau file GGUF (wajib saat mode="local")
-  ///
-  /// Backend akan memanggil reload_with_model() → pipeline di-rebuild,
-  /// device placement disesuaikan otomatis.
-  
-  Future<bool> setModel(String mode, {String? path}) async {
+  /// Get active model dari backend (untuk fallback)
+  Future<Map<String, dynamic>?> getActiveModelFromBackend() async {
     try {
-      final resp = await _dio.post(
-        '/models/set-model',
-        data: {'model_id': path},
-        options: Options(headers: _authHeader)
+      final res = await _dio.get(
+        '/models/active',
+        options: Options(headers: _authHeader),
       );
-      return resp.data['success'] == true;
-    } catch (_) {
-      return false;
+      if (res.data['success'] == true) {
+        return {
+          'model_id': res.data['data']['model_id'],
+          'mode': res.data['data']['mode'],
+        };
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting active model: $e');
+      return null;
     }
+  }
+
+  /// Alias untuk kompatibilitas dengan kode lama yang memanggil getLocalModels
+  Future<List<Map<String, dynamic>>> getLocalModels() async {
+    return getAvailableModels();
   }
 
   // -------------------------------------------------------------------------

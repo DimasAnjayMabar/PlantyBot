@@ -924,6 +924,9 @@ class _MobileInputLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if send button should be disabled due to model switching
+    final isSendDisabled = sending || !hasText || modelSwitching;
+
     return Column(
       children: [
         // Baris pertama: Tombol Model (kiri) dan Tombol Upload (kanan)
@@ -1027,7 +1030,8 @@ class _MobileInputLayout extends StatelessWidget {
               actions: <Type, Action<Intent>>{
                 SendMessageIntent: CallbackAction<SendMessageIntent>(
                   onInvoke: (intent) {
-                    if (!sending && controller.text.trim().isNotEmpty) {
+                    // Also check modelSwitching here
+                    if (!sending && !modelSwitching && controller.text.trim().isNotEmpty) {
                       onSend();
                     }
                     return null;
@@ -1041,7 +1045,7 @@ class _MobileInputLayout extends StatelessWidget {
                 expands: true,
                 keyboardType: TextInputType.multiline,
                 textInputAction: TextInputAction.newline,
-                enabled: !sending,
+                enabled: !sending && !modelSwitching,
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   color: Colors.white,
@@ -1164,9 +1168,9 @@ class _MobileInputLayout extends StatelessWidget {
                       ),
                     )
                   : ElevatedButton(
-                      onPressed: (sending || !hasText) ? null : onSend,
+                      onPressed: isSendDisabled ? null : onSend,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: hasText && !sending
+                        backgroundColor: hasText && !sending && !modelSwitching
                             ? const Color(0xFF16DB65)
                             : const Color(0xFF1A1A1A),
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1175,7 +1179,7 @@ class _MobileInputLayout extends StatelessWidget {
                         ),
                         elevation: 0,
                       ),
-                      child: sending
+                      child: (sending || modelSwitching)
                           ? const SizedBox(
                               width: 16,
                               height: 16,
@@ -1259,6 +1263,9 @@ class _DesktopInputLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if send button should be disabled due to model switching
+    final isSendDisabled = sending || !hasText || modelSwitching;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -1352,7 +1359,8 @@ class _DesktopInputLayout extends StatelessWidget {
                 actions: <Type, Action<Intent>>{
                   SendMessageIntent: CallbackAction<SendMessageIntent>(
                     onInvoke: (intent) {
-                      if (!sending && controller.text.trim().isNotEmpty) {
+                      // Also check modelSwitching here
+                      if (!sending && !modelSwitching && controller.text.trim().isNotEmpty) {
                         onSend();
                       }
                       return null;
@@ -1365,7 +1373,7 @@ class _DesktopInputLayout extends StatelessWidget {
                   maxLines: null,
                   keyboardType: TextInputType.multiline,
                   textInputAction: TextInputAction.newline,
-                  enabled: !sending,
+                  enabled: !sending && !modelSwitching,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.white,
@@ -1468,9 +1476,9 @@ class _DesktopInputLayout extends StatelessWidget {
                   ),
                 )
               : ElevatedButton(
-                  onPressed: (sending || !hasText) ? null : onSend,
+                  onPressed: isSendDisabled ? null : onSend,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: hasText && !sending
+                    backgroundColor: hasText && !sending && !modelSwitching
                         ? const Color(0xFF16DB65)
                         : const Color(0xFF1A1A1A),
                     padding: EdgeInsets.zero,
@@ -1479,7 +1487,7 @@ class _DesktopInputLayout extends StatelessWidget {
                     ),
                     elevation: 0,
                   ),
-                  child: sending
+                  child: (sending || modelSwitching)
                       ? const SizedBox(
                           width: 18,
                           height: 18,

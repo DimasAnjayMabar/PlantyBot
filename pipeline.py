@@ -1828,49 +1828,6 @@ def reset_pipeline() -> None:
 
 
 def reload_with_model(mode: str, local_llm_path: str = None) -> None:
-    """
-    Ganti mode LLM dan rebuild seluruh pipeline dalam satu panggilan.
-
-    Dipanggil dari endpoint API (misalnya POST /api/set-model) ketika
-    pengguna memilih model baru dari UI.
-
-    Args:
-        mode           : "groq" atau "local"
-        local_llm_path : Path absolut/relatif ke file GGUF (wajib jika mode="local")
-
-    Efek:
-      1. CONFIG["llm_mode"] dan device placement di-update via set_llm_mode()
-      2. Singleton RAGModels + RAGPipeline di-destroy dan di-rebuild
-      3. Jika mode="local" → embedding/reranker/nlp otomatis pindah ke CPU
-         Jika mode="groq"  → embedding/reranker/nlp kembali ke GPU (jika ada)
-
-    Contoh penggunaan di app.py / Flask route:
-        from pipeline import reload_with_model, list_local_models
-
-        @app.route("/api/set-model", methods=["POST"])
-        def api_set_model():
-            data = request.get_json()
-            reload_with_model(data["mode"], data.get("path"))
-            return {"status": "ok", "mode": data["mode"]}
-
-        @app.route("/api/models", methods=["GET"])
-        def api_models():
-            return {"models": list_local_models()}
-    """
-    # log.info(
-    #     "reload_with_model() → mode=%r  path=%r",
-    #     mode, local_llm_path,
-    # )
-    # set_llm_mode(mode, local_llm_path)  # update CONFIG + device placement
-    # reset_pipeline()                     # rebuild RAGModels + RAGPipeline
-    # log.info(
-    #     "reload_with_model() selesai — "
-    #     "embedding=%s  reranker=%s  nlp=%s  llm=%s",
-    #     CONFIG["embedding_device"],
-    #     CONFIG["reranker_device"],
-    #     "cuda" if CONFIG["nlp_device"] >= 0 else "cpu",
-    #     CONFIG.get("local_llm_path") or CONFIG["groq_model"],
-    # )
 
     if mode != "groq":
         raise ValueError(
@@ -1881,7 +1838,7 @@ def reload_with_model(mode: str, local_llm_path: str = None) -> None:
         CONFIG.get("groq_model"),
     )
     set_llm_mode("groq", None)
-    reset_pipeline()
+
     log.info(
         "reload_with_model() selesai — "
         "embedding=%s  reranker=%s  nlp=%s  llm=groq(%s)",

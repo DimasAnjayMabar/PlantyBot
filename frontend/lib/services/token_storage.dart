@@ -83,3 +83,36 @@ class TokenStorage {
     return null;
   }
 }
+
+class ModelPreferenceStorage {
+  static const String _keySelectedModel = 'selected_model_id';
+  static const String _keySelectedMode = 'selected_llm_mode'; // 'groq' or 'local'
+  
+  /// Simpan model yang dipilih
+  static Future<void> saveSelectedModel(String modelId) async {
+    await TokenStorage.write(key: _keySelectedModel, value: modelId);
+    print('💾 Model preference saved: $modelId');
+  }
+  
+  /// Ambil model yang tersimpan
+  static Future<String?> getSelectedModel() async {
+    return await TokenStorage.read(key: _keySelectedModel);
+  }
+  
+  /// Simpan mode LLM (groq/local)
+  static Future<void> saveSelectedMode(String mode) async {
+    await TokenStorage.write(key: _keySelectedMode, value: mode);
+    print('💾 Mode preference saved: $mode');
+  }
+  
+  /// Ambil mode yang tersimpan
+  static Future<String?> getSelectedMode() async {
+    return await TokenStorage.read(key: _keySelectedMode);
+  }
+  
+  /// Hapus semua preference model
+  static Future<void> clearModelPreference() async {
+    await TokenStorage.delete(key: _keySelectedModel);
+    await TokenStorage.delete(key: _keySelectedMode);
+  }
+}

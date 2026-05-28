@@ -1,8 +1,9 @@
+// user_profile.dart
 import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:frontend/services/token_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -19,18 +20,6 @@ final _dio = Dio(
   ),
 );
 
-// Secure Storage — final bukan const agar tidak crash di web
-final _storage = FlutterSecureStorage(
-  aOptions: const AndroidOptions(encryptedSharedPreferences: true),
-  webOptions: const WebOptions(
-    dbName: 'agribot_secure',
-    publicKey: 'agribot_key',
-  ),
-);
-
-// Interval refresh token — 25 menit agar aman sebelum server expire (30 menit)
-const _kRefreshInterval = Duration(minutes: 25);
-
 // ---------------------------------------------------------------------------
 // Warna & konstanta
 // ---------------------------------------------------------------------------
@@ -41,6 +30,9 @@ const _neonDim = Color(0x3316DB65);
 const _surface = Color(0xFF0D0D0D);
 const _surfaceAlt = Color(0xFF111111);
 const _textMuted = Color(0xFFA3A3A3);
+
+// Interval refresh token — 25 menit agar aman sebelum server expire (30 menit)
+const _kRefreshInterval = Duration(minutes: 25);
 
 // ---------------------------------------------------------------------------
 // Model sederhana
@@ -102,13 +94,7 @@ class _SessionItem {
 // ---------------------------------------------------------------------------
 
 class UserProfilePage extends StatefulWidget {
-  /// Token & userId dibaca langsung dari secure storage — tidak perlu dikirim
-  /// lewat constructor. Constructor tetap menerima parameter opsional untuk
-  /// kompatibilitas sementara sebelum semua route diupdate.
-  final String? accessToken;
-  final int? userId;
-
-  const UserProfilePage({super.key, this.accessToken, this.userId});
+  const UserProfilePage({super.key});
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -116,7 +102,7 @@ class UserProfilePage extends StatefulWidget {
 
 class _UserProfilePageState extends State<UserProfilePage>
     with SingleTickerProviderStateMixin {
-  // ── Auth state — dibaca dari secure storage saat initState ────────────────
+  // ── Auth state — dibaca dari token_storage ───────────────────────────────
   String? _accessToken;
   int? _userId;
   Timer? _refreshTimer;
@@ -144,21 +130,13 @@ class _UserProfilePageState extends State<UserProfilePage>
     _initAuth();
   }
 
-  /// Baca access token & userId dari secure storage, lalu mulai sesi.
+  /// Baca access token & userId dari token_storage
   Future<void> _initAuth() async {
     try {
-      // Baca sequential — IndexedDB web tidak support concurrent reads
-      final storedToken = await _storage.read(key: 'access_token');
-      final storedUserId = await _storage.read(key: 'user_id');
-
-      _accessToken = storedToken ?? widget.accessToken;
-      _userId = (storedUserId != null)
-          ? int.tryParse(storedUserId)
-          : widget.userId;
+      _accessToken = await TokenStorage.read(key: 'access_token');
+      _userId = await TokenStorage.getUserId();
     } catch (_) {
-      // Storage error — fallback ke constructor params
-      _accessToken = widget.accessToken;
-      _userId = widget.userId;
+      // Storage error
     }
 
     if (_accessToken == null || _accessToken!.isEmpty || _userId == null) {
@@ -179,19 +157,16 @@ class _UserProfilePageState extends State<UserProfilePage>
 
   // ── Background token refresh ───────────────────────────────────────────────
 
-  /// Jalankan timer periodik setiap [_kRefreshInterval].
-  /// Dipanggil sekali saat _initAuth selesai.
+  /// Jalankan timer periodik setiap [_kRefreshInterval]
   void _startRefreshTimer() {
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(_kRefreshInterval, (_) => _silentRefresh());
   }
 
   /// Hit POST /users/refresh-token secara silent.
-  /// - Jika berhasil: tulis access_token & refresh_token baru ke storage
-  ///   dan update _accessToken di state.
-  /// - Jika 401/gagal: token sudah tidak bisa diselamatkan → paksa login ulang.
+  /// Menggunakan token_storage untuk baca/tulis token.
   Future<void> _silentRefresh() async {
-    final currentRefresh = await _storage.read(key: 'refresh_token');
+    final currentRefresh = await TokenStorage.read(key: 'refresh_token');
     if (currentRefresh == null || currentRefresh.isEmpty) {
       _forceLogout();
       return;
@@ -208,44 +183,37 @@ class _UserProfilePageState extends State<UserProfilePage>
         final newAccess = data['access_token'] as String;
         final newRefresh = data['refresh_token'] as String;
 
-        // Tulis token baru ke storage
+        // Tulis token baru ke token_storage
         await Future.wait([
-          _storage.write(key: 'access_token', value: newAccess),
-          _storage.write(key: 'refresh_token', value: newRefresh),
+          TokenStorage.write(key: 'access_token', value: newAccess),
+          TokenStorage.write(key: 'refresh_token', value: newRefresh),
         ]);
 
         // Update created_at session jika server mengembalikannya
         if (data['created_at'] != null) {
-          await _storage.write(
+          await TokenStorage.write(
             key: 'session_created_at',
             value: data['created_at'] as String,
           );
         }
 
-        // Update state — request berikutnya langsung pakai token baru
+        // Update state
         if (mounted) setState(() => _accessToken = newAccess);
       }
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
       if (statusCode == 401 || statusCode == 403) {
-        // Refresh token expired / tidak valid → session sudah mati
         _forceLogout();
       }
-      // Error jaringan sementara — biarkan, timer akan coba lagi nanti
     } catch (_) {
-      // Abaikan error tak terduga, jangan paksa logout
+      // Abaikan error tak terduga
     }
   }
 
   /// Hapus semua token dari storage dan redirect ke login.
   Future<void> _forceLogout() async {
     _refreshTimer?.cancel();
-    await Future.wait([
-      _storage.delete(key: 'access_token'),
-      _storage.delete(key: 'refresh_token'),
-      _storage.delete(key: 'user_id'),
-      _storage.delete(key: 'session_created_at'),
-    ]);
+    await TokenStorage.deleteAll();
     if (mounted) context.go('/users/login');
   }
 
@@ -282,6 +250,13 @@ class _UserProfilePageState extends State<UserProfilePage>
       _fadeController.forward(from: 0);
     } on DioException catch (e) {
       String msg = 'Gagal memuat data.';
+      
+      // Cek apakah token expired
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        _forceLogout();
+        return;
+      }
+      
       if (e.response?.data['detail'] != null) {
         msg = e.response!.data['detail'].toString();
       }
@@ -311,14 +286,9 @@ class _UserProfilePageState extends State<UserProfilePage>
 
     try {
       await _dio.post('/users/logout', options: Options(headers: _authHeaders));
-
-      // Hapus semua token dari storage
-      await Future.wait([
-        _storage.delete(key: 'access_token'),
-        _storage.delete(key: 'refresh_token'),
-        _storage.delete(key: 'user_id'),
-        _storage.delete(key: 'session_created_at'),
-      ]);
+      
+      // Hapus semua token dari storage — panggil TokenStorage.deleteAll()
+      await TokenStorage.deleteAll();
 
       if (mounted) context.go('/users/login');
     } on DioException catch (e) {
@@ -513,13 +483,13 @@ class _UserProfilePageState extends State<UserProfilePage>
                 opacity: _fadeAnimation,
                 child: Column(
                   children: [
-                    // Tombol kembali di luar CustomScrollView
+                    // Tombol kembali
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: GestureDetector(
-                          onTap: () => Navigator.of(context).pop,
+                          onTap: () => Navigator.of(context).pop(),
                           child: Container(
                             width: 40,
                             height: 40,
@@ -543,7 +513,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                         ),
                       ),
                     ),
-                    // CustomScrollView tanpa AppBar
+                    // CustomScrollView
                     Expanded(
                       child: CustomScrollView(
                         slivers: [
@@ -591,7 +561,7 @@ class _UserProfilePageState extends State<UserProfilePage>
 }
 
 // ---------------------------------------------------------------------------
-// Profile Card — avatar inisial + nama + username
+// Profile Card
 // ---------------------------------------------------------------------------
 
 class _ProfileCard extends StatelessWidget {
@@ -624,7 +594,6 @@ class _ProfileCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Avatar inisial dengan neon glow
           Container(
             width: 56,
             height: 56,
@@ -676,7 +645,6 @@ class _ProfileCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Badge status
                 Row(
                   children: [
                     _StatusBadge(
@@ -729,7 +697,7 @@ class _StatusBadge extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Credential Card — email & ID
+// Credential Card
 // ---------------------------------------------------------------------------
 
 class _CredentialCard extends StatelessWidget {
@@ -743,7 +711,6 @@ class _CredentialCard extends StatelessWidget {
       title: 'Informasi Akun',
       icon: Icons.badge_outlined,
       children: [
-        // Email row + anchor ganti email
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
@@ -862,8 +829,6 @@ class _SessionTile extends StatelessWidget {
 
   String _formatDate(String iso) {
     try {
-      // Server menyimpan created_at dalam UTC tanpa suffix 'Z'.
-      // Tambahkan 'Z' agar DateTime.parse tahu ini UTC, baru konversi ke local.
       final normalized = iso.endsWith('Z') ? iso : '${iso}Z';
       final dt = DateTime.parse(normalized).toLocal();
       final now = DateTime.now();
@@ -1038,7 +1003,6 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
@@ -1059,9 +1023,7 @@ class _SectionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          // Divider tipis
           Container(height: 1, color: const Color(0xFF161616)),
-          // Content
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Column(

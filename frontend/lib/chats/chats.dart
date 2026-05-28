@@ -5,7 +5,6 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:frontend/chats/bubble_chats.dart';
 import 'package:frontend/chats/inputbar.dart';
 import 'package:frontend/chats/service_chats.dart';
@@ -145,6 +144,9 @@ class _ChatsPageState extends State<ChatsPage>
       if (mounted) context.go('/users/login');
       return;
     }
+    await _chatService.initModelPreference();
+
+    final currentModel = await _chatService.getCurrentModel();
     await Future.wait([_fetchTopics(), _fetchProfile()]);
     _pickGreeting();
   }
