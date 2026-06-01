@@ -1,56 +1,31 @@
 # evaluation/embedder_eval.py
 """
 Evaluasi untuk komponen Embedder
-Metrik: retrieval accuracy, context relevance (graph vs raw)
+Metrik: Graph vs Raw comparison only
 """
 
 import json
 import os
 import sys
 import numpy as np
-from typing import List, Dict, Optional, Tuple
-from dataclasses import dataclass, asdict
-from collections import defaultdict
+from typing import List, Dict, Optional
+from dataclasses import dataclass
 import hashlib
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import CONFIG
 
-@dataclass
-class RetrievalMetrics:
-    """Metrik retrieval untuk satu query"""
-    recall_at_1: float
-    recall_at_3: float
-    recall_at_5: float
-    recall_at_10: float
-    mrr: float  # Mean Reciprocal Rank
-    ndcg_at_5: float  # Normalized Discounted Cumulative Gain
-    query_type: str  # 'factual', 'causal', 'comparative'
-    
-@dataclass
-class ContextComparison:
-    """Perbandingan graph vs raw embedder"""
-    graph_avg_context_length: float
-    raw_avg_context_length: float
-    graph_avg_entities: float
-    raw_avg_entities: float
-    graph_avg_semantic_similarity: float
-    raw_avg_semantic_similarity: float
-    improvement_pct_length: float
-    improvement_pct_entities: float
-
 
 class EmbedderEvaluator:
     """
-    Evaluasi performa embedding model dan retrieval.
+    Evaluasi performa embedding model - Graph vs Raw comparison.
     
     Memerlukan test dataset dengan format:
     {
         "queries": [
             {
                 "query": "string",
-                "expected_chunk_ids": ["id1", "id2"],  # relevant chunks
+                "expected_chunk_ids": ["id1", "id2"],
                 "query_type": "factual|causal|comparative",
-                "relevance_scores": {"chunk_id": score}  # optional graded relevance
             }
         ]
     }
@@ -66,120 +41,6 @@ class EmbedderEvaluator:
         self.chroma = rag_pipeline.chroma
         self.neo4j = rag_pipeline.neo4j
         
-    def evaluate_retrieval_accuracy(
-        self,
-        test_queries: List[Dict],
-        k_values: List[int] = [1, 3, 5, 10]
-    ) -> Dict:
-        """
-        Hitung Recall@K, MRR, dan nDCG@K untuk semua test queries.
-        
-        Returns:
-            Dict dengan metrik agregat dan per-query-type
-        """
-        results = {
-            "overall": {
-                f"recall@{k}": [] for k in k_values
-            },
-            "per_query_type": defaultdict(lambda: {
-                f"recall@{k}": [] for k in k_values
-            }),
-            "per_query": []
-        }
-        
-        mrr_scores = []
-        
-        for query_data in test_queries:
-            query = query_data["query"]
-            expected_ids = set(query_data["expected_chunk_ids"])
-            query_type = query_data.get("query_type", "unknown")
-            graded_relevance = query_data.get("relevance_scores", {})
-            
-            # Get retrieval results
-            query_emb = self.models.get_embedding(query)
-            candidates = self.chroma.retrieve(query_emb, k=max(k_values))
-            retrieved_ids = [c.isi_id for c in candidates]
-            
-            # Calculate metrics for this query
-            query_metrics = {}
-            
-            # Recall@K and nDCG@K
-            for k in k_values:
-                retrieved_k = retrieved_ids[:k]
-                relevant_k = [rid for rid in retrieved_k if rid in expected_ids]
-                
-                # Recall
-                recall = len(relevant_k) / len(expected_ids) if expected_ids else 0
-                results["overall"][f"recall@{k}"].append(recall)
-                results["per_query_type"][query_type][f"recall@{k}"].append(recall)
-                query_metrics[f"recall@{k}"] = recall
-                
-                # nDCG@K (if graded relevance available)
-                if graded_relevance:
-                    dcg = 0
-                    idcg = 0
-                    for i, rid in enumerate(retrieved_k[:k]):
-                        rel = graded_relevance.get(rid, 0)
-                        dcg += rel / np.log2(i + 2)
-                    
-                    # Ideal DCG: sort relevance scores descending
-                    sorted_scores = sorted(graded_relevance.values(), reverse=True)[:k]
-                    for i, rel in enumerate(sorted_scores):
-                        idcg += rel / np.log2(i + 2)
-                    
-                    ndcg = dcg / idcg if idcg > 0 else 0
-                    query_metrics[f"ndcg@{k}"] = ndcg
-            
-            # MRR (Mean Reciprocal Rank)
-            rank = None
-            for i, rid in enumerate(retrieved_ids):
-                if rid in expected_ids:
-                    rank = i + 1
-                    break
-            mrr = 1 / rank if rank else 0
-            mrr_scores.append(mrr)
-            query_metrics["mrr"] = mrr
-            
-            # Store per-query results
-            results["per_query"].append({
-                "query": query[:100],
-                "query_type": query_type,
-                "metrics": query_metrics,
-                "retrieved_count": len(retrieved_ids),
-                "expected_count": len(expected_ids)
-            })
-        
-        # Aggregate results
-        final_results = {
-            "overall": {},
-            "per_query_type": {},
-            "per_query": results["per_query"],
-            "avg_mrr": np.mean(mrr_scores),
-            "std_mrr": np.std(mrr_scores),
-            "total_queries": len(test_queries)
-        }
-        
-        for k in k_values:
-            final_results["overall"][f"recall@{k}"] = {
-                "mean": np.mean(results["overall"][f"recall@{k}"]),
-                "std": np.std(results["overall"][f"recall@{k}"]),
-                "min": np.min(results["overall"][f"recall@{k}"]),
-                "max": np.max(results["overall"][f"recall@{k}"])
-            }
-        
-        for query_type, metrics in results["per_query_type"].items():
-            final_results["per_query_type"][query_type] = {}
-            for k in k_values:
-                vals = metrics[f"recall@{k}"]
-                if vals:
-                    final_results["per_query_type"][query_type][f"recall@{k}"] = {
-                        "mean": np.mean(vals),
-                        "std": np.std(vals),
-                        "count": len(vals)
-                    }
-        
-        return final_results
-    
     def compare_graph_vs_raw(
         self,
         test_queries: List[Dict],
@@ -230,9 +91,8 @@ class EmbedderEvaluator:
                 results["graph"]["similarity_to_query"].append(similarity)
             
             # ── Raw pipeline (regular) ────────────────────────────────────────
-            # ✅ BENAR
             raw_collection = self.chroma.client.get_collection(
-                CONFIG["raw_collection"]  # ← langsung dari CONFIG
+                CONFIG["raw_collection"]
             )
             raw_results = raw_collection.query(
                 query_embeddings=[query_emb],
@@ -294,74 +154,16 @@ class EmbedderEvaluator:
             "per_query": results["per_query"]
         }
     
-    def evaluate_context_diversity(
-        self,
-        test_queries: List[Dict],
-        k: int = 5
-    ) -> Dict:
-        """
-        Evaluasi diversitas konteks yang direturn.
-        
-        Metrik:
-        - Unique jurnal count per query
-        - Unique sub_judul count per query
-        - Information overlap antar chunks
-        """
-        results = []
-        
-        for query_data in test_queries:
-            query = query_data["query"]
-            query_emb = self.models.get_embedding(query)
-            
-            candidates = self.chroma.retrieve(query_emb, k=k)
-            enriched = self.neo4j.enrich(candidates, context_window=1)
-            
-            unique_journals = set(c.jurnal_id for c in enriched)
-            unique_headings = set(c.sub_judul for c in enriched)
-            
-            # Calculate pairwise cosine similarity between chunks
-            chunk_texts = [c.context_text for c in enriched]
-            if len(chunk_texts) > 1:
-                from sklearn.metrics.pairwise import cosine_similarity
-                
-                chunk_embs = self.models.embed_batch_safe(chunk_texts)
-                similarity_matrix = cosine_similarity(chunk_embs)
-                # Exclude diagonal
-                mask = np.ones(similarity_matrix.shape, dtype=bool)
-                np.fill_diagonal(mask, 0)
-                avg_similarity = similarity_matrix[mask].mean() if mask.any() else 0
-                diversity_score = 1 - avg_similarity
-            else:
-                diversity_score = 1.0
-            
-            results.append({
-                "query": query[:100],
-                "unique_journals": len(unique_journals),
-                "unique_headings": len(unique_headings),
-                "diversity_score": diversity_score,
-                "total_chunks": len(enriched)
-            })
-        
-        return {
-            "overall": {
-                "avg_unique_journals": np.mean([r["unique_journals"] for r in results]),
-                "avg_unique_headings": np.mean([r["unique_headings"] for r in results]),
-                "avg_diversity_score": np.mean([r["diversity_score"] for r in results]),
-                "std_diversity_score": np.std([r["diversity_score"] for r in results])
-            },
-            "per_query": results
-        }
-    
     def _count_entities(self, text: str) -> int:
         """Hitung jumlah entitas (NER) dalam teks."""
         try:
             # Gunakan NER pipeline yang sudah ada
-            entities = self.models.nlp_en_pipeline(text[:512])  # Batasi panjang
+            entities = self.models.nlp_en_pipeline(text[:512])
             # Filter by score threshold
             high_confidence = [e for e in entities if e.get("score", 0) >= 0.7]
             return len(high_confidence)
         except Exception:
-            # Fallback: hitung proper nouns (kata dengan huruf kapital di awal)
+            # Fallback: hitung proper nouns
             import re
             proper_nouns = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', text)
             return len(set(proper_nouns))
@@ -371,3 +173,70 @@ class EmbedderEvaluator:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(metrics, f, indent=2, ensure_ascii=False)
+
+    # ── Visualisasi ───────────────────────────────────────────────────────────
+
+    def plot_metrics(
+        self,
+        graph_vs_raw_metrics: Dict,
+        save_path: str = None
+    ):
+        """
+        Tampilkan bar chart untuk graph vs raw metrics.
+        
+        3 panel:
+        - Context length
+        - Entity coverage  
+        - Query-Context similarity
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib.gridspec as gridspec
+
+        plt.style.use('seaborn-v0_8-darkgrid')
+        fig = plt.figure(figsize=(14, 6))
+        gs = gridspec.GridSpec(1, 3, figure=fig, hspace=0.45, wspace=0.35)
+
+        GREEN = '#2ecc71'
+        RED   = '#e74c3c'
+
+        g = graph_vs_raw_metrics.get("graph", {})
+        r = graph_vs_raw_metrics.get("raw",   {})
+        imp = graph_vs_raw_metrics.get("improvement", {})
+
+        panels = [
+            ("avg_context_length",  "Characters",         "Average Context Length",   gs[0, 0]),
+            ("avg_entity_coverage", "Entities per Chunk", "Entity Coverage",          gs[0, 1]),
+            ("avg_semantic_similarity", "Similarity Score", "Query-Context Similarity", gs[0, 2]),
+        ]
+        imp_keys = ["context_length_pct", "entity_coverage_pct", "semantic_similarity_pct"]
+
+        for (metric_key, ylabel, title, subplot_spec), imp_key in zip(panels, imp_keys):
+            ax = fig.add_subplot(subplot_spec)
+            vals = [g.get(metric_key, 0), r.get(metric_key, 0)]
+            bars_ = ax.bar(['Graph', 'Raw'], vals,
+                           color=[GREEN, RED], edgecolor='black', alpha=0.85)
+            ax.set_ylabel(ylabel, fontsize=9)
+            ax.set_title(title, fontsize=11, weight='bold')
+            ax.set_ylim(0, max(max(vals) * 1.2, 1))
+            ax.grid(axis='y', alpha=0.3)
+            for bar_, val_ in zip(bars_, vals):
+                ax.text(bar_.get_x() + bar_.get_width() / 2,
+                        bar_.get_height() + max(vals) * 0.03,
+                        f'{val_:.2f}', ha='center', fontsize=9, weight='bold')
+            pct = imp.get(imp_key, 0)
+            ax.text(0.5, -0.18,
+                    f"Improvement: +{pct:.1f}%",
+                    transform=ax.transAxes, ha='center',
+                    fontsize=9, color='darkgreen', weight='bold')
+
+        fig.suptitle("Graph Enrichment vs Raw Embedder", fontsize=15, weight='bold')
+
+        if save_path:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            plt.savefig(save_path, bbox_inches='tight', dpi=150)
+            print(f"[EmbedderEvaluator] Visualisasi disimpan: {save_path}")
+        else:
+            plt.show()
+
+        plt.close(fig)
+        return fig

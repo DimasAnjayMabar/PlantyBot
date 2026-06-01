@@ -481,3 +481,230 @@ class RAGEvaluator:
         data = [asdict(m) for m in metrics]
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
+
+    # ── Visualisasi ───────────────────────────────────────────────────────────
+
+    def plot_metrics(
+        self,
+        faithfulness_metrics: list,
+        completeness_metrics: list,
+        relevance_metrics: list,
+        speed_metrics: dict,
+        save_path: str = None
+    ):
+        """
+        Tampilkan bar chart ringkasan untuk semua metrik RAG.
+
+        Layout 2×2:
+        - [0,0] Rata-rata skor Faithfulness / Completeness / Relevance
+        - [0,1] Distribusi faithfulness (histogram)
+        - [1,0] Pipeline component latency
+        - [1,1] Completeness — causal depth distribution
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib.gridspec as gridspec
+
+        plt.style.use('seaborn-v0_8-darkgrid')
+        fig = plt.figure(figsize=(14, 10))
+        gs  = gridspec.GridSpec(2, 2, figure=fig, hspace=0.45, wspace=0.35)
+
+        # ── Panel kiri atas: skor rata-rata ──────────────────────────────────
+        ax_scores = fig.add_subplot(gs[0, 0])
+        f_mean = float(np.mean([m.score for m in faithfulness_metrics])) if faithfulness_metrics else 0
+        c_mean = float(np.mean([m.score for m in completeness_metrics])) if completeness_metrics else 0
+        r_mean = float(np.mean([m.score for m in relevance_metrics]))    if relevance_metrics   else 0
+
+        labels = ["Faithfulness", "Completeness", "Relevance"]
+        values = [f_mean, c_mean, r_mean]
+        colors = ['#3498db', '#e67e22', '#2ecc71']
+
+        bars = ax_scores.bar(labels, values, color=colors, edgecolor='black', alpha=0.85)
+        ax_scores.set_ylim(0, 1.1)
+        ax_scores.set_ylabel("Mean Score")
+        ax_scores.set_title("RAG Quality Scores", fontsize=12, weight='bold')
+        ax_scores.grid(axis='y', alpha=0.3)
+        for bar, val in zip(bars, values):
+            ax_scores.text(bar.get_x() + bar.get_width() / 2,
+                           bar.get_height() + 0.02,
+                           f'{val:.3f}', ha='center', fontsize=10, weight='bold')
+
+        # ── Panel kanan atas: histogram faithfulness ──────────────────────────
+        ax_hist = fig.add_subplot(gs[0, 1])
+        if faithfulness_metrics:
+            f_scores = [m.score for m in faithfulness_metrics]
+            ax_hist.hist(f_scores, bins=min(10, len(f_scores)),
+                         color='#3498db', edgecolor='black', alpha=0.75)
+            ax_hist.axvline(f_mean, color='red', linestyle='--',
+                            label=f'Mean: {f_mean:.3f}')
+            ax_hist.set_xlabel("Score")
+            ax_hist.set_ylabel("Frequency")
+            ax_hist.legend(fontsize=9)
+        ax_hist.set_xlim(0, 1)
+        ax_hist.set_title("Faithfulness Distribution", fontsize=12, weight='bold')
+        ax_hist.grid(axis='y', alpha=0.3)
+
+        # ── Panel kiri bawah: latency per komponen ────────────────────────────
+        ax_speed = fig.add_subplot(gs[1, 0])
+        comp_names  = ['Retrieval', 'Rerank', 'Generation', 'Total']
+        comp_keys   = ['retrieval', 'rerank', 'generation', 'total']
+        comp_times  = [speed_metrics.get(k, {}).get('mean', 0) for k in comp_keys]
+        comp_colors = ['#9b59b6', '#1abc9c', '#f39c12', '#e74c3c']
+
+        bars_sp = ax_speed.bar(comp_names, comp_times,
+                               color=comp_colors, edgecolor='black', alpha=0.85)
+        ax_speed.set_ylabel("Time (seconds)")
+        ax_speed.set_title("Pipeline Component Latency", fontsize=12, weight='bold')
+        ax_speed.grid(axis='y', alpha=0.3)
+        for bar, val in zip(bars_sp, comp_times):
+            if val > 0:
+                ax_speed.text(bar.get_x() + bar.get_width() / 2,
+                              bar.get_height() + 0.005,
+                              f'{val:.2f}s', ha='center', fontsize=9, weight='bold')
+
+        # ── Panel kanan bawah: completeness causal depth ──────────────────────
+        ax_depth = fig.add_subplot(gs[1, 1])
+        if completeness_metrics:
+            depths = [m.explanation_depth for m in completeness_metrics]
+            depth_counts = {}
+            for d in depths:
+                depth_counts[d] = depth_counts.get(d, 0) + 1
+            dlvls   = sorted(depth_counts.keys())
+            dcounts = [depth_counts[d] for d in dlvls]
+            ax_depth.bar(dlvls, dcounts, color='#e67e22', edgecolor='black', alpha=0.85)
+            ax_depth.set_xticks(dlvls)
+            for i, (lvl, cnt) in enumerate(zip(dlvls, dcounts)):
+                ax_depth.text(lvl, cnt + 0.1, str(cnt),
+                              ha='center', fontsize=9, weight='bold')
+        ax_depth.set_xlabel("Causal Depth Level")
+        ax_depth.set_ylabel("Number of Responses")
+        ax_depth.set_title("Explanation Depth Distribution", fontsize=12, weight='bold')
+        ax_depth.grid(axis='y', alpha=0.3)
+
+        plt.suptitle("RAG Pipeline Evaluation — Full Metrics",
+                     fontsize=15, weight='bold')
+
+        if save_path:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            plt.savefig(save_path, bbox_inches='tight', dpi=150)
+            print(f"[RAGEvaluator] Visualisasi disimpan: {save_path}")
+        else:
+            plt.show()
+
+        plt.close(fig)
+        return fig
+    
+    def plot_comparison_metrics(
+        self,
+        graph_metrics: Dict,
+        raw_metrics: Dict,
+        save_path: str = None
+    ):
+        """
+        Tampilkan bar chart perbandingan Graph RAG vs Raw RAG.
+        
+        Layout 1×2:
+        - RAG Quality Scores (Faithfulness, Completeness, Relevance)
+        - Pipeline Component Latency (Retrieval, Rerank, Generation)
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib.gridspec as gridspec
+
+        plt.style.use('seaborn-v0_8-darkgrid')
+        fig = plt.figure(figsize=(14, 6))
+        gs = gridspec.GridSpec(1, 2, figure=fig, hspace=0.45, wspace=0.35)
+
+        GREEN = '#2ecc71'
+        RED = '#e74c3c'
+
+        # ── Panel 1: RAG Quality Scores ──────────────────────────────────────
+        ax1 = fig.add_subplot(gs[0, 0])
+        
+        # Extract scores
+        def get_scores(metrics_dict, metric_name):
+            if not metrics_dict:
+                return 0
+            items = metrics_dict.get(metric_name, [])
+            if items:
+                scores = [item.score for item in items]
+                return np.mean(scores)
+            return 0
+        
+        graph_f = get_scores(graph_metrics, "faithfulness")
+        graph_c = get_scores(graph_metrics, "completeness")
+        graph_r = get_scores(graph_metrics, "relevance")
+        
+        raw_f = get_scores(raw_metrics, "faithfulness")
+        raw_c = get_scores(raw_metrics, "completeness")
+        raw_r = get_scores(raw_metrics, "relevance")
+        
+        # Bar positions
+        labels = ['Faithfulness', 'Completeness', 'Answer\nRelevance']
+        x = np.arange(len(labels))
+        width = 0.35
+        
+        bars1 = ax1.bar(x - width/2, [graph_f, graph_c, graph_r], 
+                        width, label='Graph RAG', color=GREEN, edgecolor='black', alpha=0.85)
+        bars2 = ax1.bar(x + width/2, [raw_f, raw_c, raw_r], 
+                        width, label='Raw RAG', color=RED, edgecolor='black', alpha=0.85)
+        
+        ax1.set_ylabel("Score")
+        ax1.set_title("RAG Quality Scores Comparison", fontsize=12, weight='bold')
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(labels)
+        ax1.legend()
+        ax1.set_ylim(0, 1.1)
+        ax1.grid(axis='y', alpha=0.3)
+        
+        # Add value labels
+        for bars, prefix in [(bars1, "G"), (bars2, "R")]:
+            for bar, val in zip(bars, [graph_f, graph_c, graph_r] if prefix == "G" else [raw_f, raw_c, raw_r]):
+                ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
+                        f'{val:.3f}', ha='center', fontsize=9, fontweight='bold')
+        
+        # ── Panel 2: Pipeline Component Latency ──────────────────────────────
+        ax2 = fig.add_subplot(gs[0, 1])
+        
+        def get_latency(metrics_dict, component):
+            if not metrics_dict:
+                return 0
+            speed = metrics_dict.get("speed", {})
+            return speed.get(component, {}).get("mean", 0)
+        
+        components = ['retrieval', 'rerank', 'generation']
+        comp_labels = ['Retrieval', 'Rerank', 'Generation']
+        
+        graph_times = [get_latency(graph_metrics, c) for c in components]
+        raw_times = [get_latency(raw_metrics, c) for c in components]
+        
+        x2 = np.arange(len(comp_labels))
+        
+        bars1 = ax2.bar(x2 - width/2, graph_times, width, 
+                        label='Graph RAG', color=GREEN, edgecolor='black', alpha=0.85)
+        bars2 = ax2.bar(x2 + width/2, raw_times, width,
+                        label='Raw RAG', color=RED, edgecolor='black', alpha=0.85)
+        
+        ax2.set_ylabel("Time (seconds)")
+        ax2.set_title("Pipeline Component Latency", fontsize=12, weight='bold')
+        ax2.set_xticks(x2)
+        ax2.set_xticklabels(comp_labels)
+        ax2.legend()
+        ax2.grid(axis='y', alpha=0.3)
+        
+        # Add value labels
+        for bars, times in [(bars1, graph_times), (bars2, raw_times)]:
+            for bar, val in zip(bars, times):
+                if val > 0:
+                    ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                            f'{val:.2f}s', ha='center', fontsize=9)
+        
+        plt.suptitle("Graph RAG vs Raw RAG Comparison", fontsize=15, weight='bold')
+
+        if save_path:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            plt.savefig(save_path, bbox_inches='tight', dpi=150)
+            print(f"[RAGEvaluator] Comparison plot saved: {save_path}")
+        else:
+            plt.show()
+
+        plt.close(fig)
+        return fig

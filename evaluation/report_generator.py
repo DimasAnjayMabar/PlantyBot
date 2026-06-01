@@ -37,19 +37,11 @@ class ReportGenerator:
         
     def generate_embedder_report(
         self,
-        retrieval_metrics: Dict,
         graph_vs_raw_metrics: Dict,
-        diversity_metrics: Dict,
         config: Dict = None
     ) -> str:
         """
-        Generate PDF report untuk evaluasi embedder.
-        
-        Includes:
-        - Retrieval Accuracy @K (tabel + bar chart)
-        - MRR per query type (bar chart)
-        - Graph vs Raw comparison (side-by-side bar chart)
-        - Context diversity metrics (tabel)
+        Generate PDF report untuk evaluasi embedder - hanya Graph vs Raw.
         """
         output_dir = os.path.join(self.output_base_dir, "embedder")
         os.makedirs(output_dir, exist_ok=True)
@@ -58,33 +50,20 @@ class ReportGenerator:
         
         with PdfPages(pdf_path) as pdf:
             # Halaman 1: Cover
-            self._add_cover_page(pdf, "Embedder Evaluation Report", config)
+            self._add_cover_page(pdf, "Embedder Evaluation Report (Graph vs Raw)", config)
             
-            # Halaman 2: Retrieval Accuracy Summary
-            self._add_retrieval_accuracy_page(pdf, retrieval_metrics)
-            
-            # Halaman 3: MRR per Query Type
-            self._add_mrr_page(pdf, retrieval_metrics)
-            
-            # Halaman 4: Graph vs Raw Comparison
+            # Halaman 2: Graph vs Raw Comparison
             self._add_graph_vs_raw_page(pdf, graph_vs_raw_metrics)
-            
-            # Halaman 5: Context Diversity
-            self._add_diversity_page(pdf, diversity_metrics)
-            
-            # Halaman 6: Detailed Results Table
-            self._add_detailed_table_page(pdf, retrieval_metrics, "Embedder Detailed Results")
         
         # Save JSON metrics
         json_path = os.path.join(output_dir, f"{self.timestamp}_embedder_metrics.json")
         self._save_json({
-            "retrieval_metrics": retrieval_metrics,
             "graph_vs_raw": graph_vs_raw_metrics,
-            "diversity_metrics": diversity_metrics,
             "config": config
         }, json_path)
         
         return pdf_path
+
     
     def generate_rag_report(
         self,
@@ -347,7 +326,6 @@ class ReportGenerator:
         """Halaman perbandingan Graph vs Raw embedder."""
         fig, axes = plt.subplots(1, 3, figsize=(14, 5))
         
-        # Data
         graph_data = metrics.get("graph", {})
         raw_data = metrics.get("raw", {})
         improvement = metrics.get("improvement", {})

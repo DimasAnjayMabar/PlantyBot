@@ -86,10 +86,7 @@
   "llm_prompts": [
     "Jelaskan 4 jenis penyakit bakteri pada kentang",
     "Apa perbedaan hama thrips dan kutu kebul pada tanaman cabai?",
-    "Sebutkan musuh alami yang dapat mengendalikan hama pada tanaman cabai",
-    "Bagaimana cara mengendalikan penyakit layu fusarium?",
-    "Apa gejala penyakit busuk cincin bakteri pada kentang?",
-    "Jelaskan indeks keanekaragaman hama pada tanaman cabai rawit"
+    "Sebutkan musuh alami yang dapat mengendalikan hama pada tanaman cabai"
   ],
 
   "compliance_tests": [
