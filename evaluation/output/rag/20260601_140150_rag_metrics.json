@@ -1,0 +1,183 @@
+{
+  "faithfulness": [
+    {
+      "score": 0.2,
+      "total_claims": 10,
+      "verified_claims": 2,
+      "unverified_claims": [
+        "**Busuk cincin bakteri** disebabkan oleh **Clavibacter michiganensis**",
+        "**Busuk lunak bakteri** disebabkan oleh **Erwinia carotovora**",
+        "**Kudis bakteri** disebabkan oleh **Streptomyces scabies**",
+        "**Busuk coklat** disebabkan oleh **Ralstonia solanacearum**",
+        "Keempat bakteri tersebut bersifat infeksius dan memunculkan gejala yang berbeda pada tanaman kentang yang terinfeksi"
+      ]
+    },
+    {
+      "score": 0.5,
+      "total_claims": 6,
+      "verified_claims": 3,
+      "unverified_claims": [
+        "Saya dapat menjelaskan bahwa penyakit layu fusarium pada tanaman cabai disebabkan oleh patogen Fusarium oxysporum",
+        "Jaringan vaskular berwarna coklat terutama pada batang bagian bawah dekat akar",
+        "Penggunaan fungisida sistemik seperti Metalaksil-M 4% + Mancozeb 64% (Ridomil Gold MZ 4/64 WP) pada konsentrasi 3 g/l air, bergantian dengan fungisida kontak seperti klorotalonil (Daconil 500 F, 2g/l) juga dapat dilakukan"
+      ]
+    },
+    {
+      "score": 0.4,
+      "total_claims": 5,
+      "verified_claims": 2,
+      "unverified_claims": [
+        "Intensitas serangan hama pada tanaman cabai rawit relatif rendah, dengan nilai rata-rata intensitas serangan sebesar 6,537%",
+        "Ini menunjukkan bahwa serangan hama pada tanaman cabai rawit dapat dikategorikan sebagai serangan ringan",
+        "Saya juga menemukan bahwa rendahnya intensitas serangan ini disebabkan oleh adanya perilaku penyemprotan pestisida oleh pemilik lahan, serta penurunan populasi hama pada minggu ke-5 sampai minggu terakhir pengamatan"
+      ]
+    },
+    {
+      "score": 0.5,
+      "total_claims": 6,
+      "verified_claims": 3,
+      "unverified_claims": [
+        "Daun yang terserang berubah warna menjadi coklat tembaga, mengeriting atau keriput, dan akhirnya mati",
+        "Pada serangan berat, daun, tunas, atau pucuk menggulung ke dalam dan muncul benjolan seperti tumor, pertumbuhan tanaman terhambat, dan kerdil, bahkan pucuk tanaman menjadi mati",
+        "Buah yang terserang juga dapat berubah menjadi coklat buram dan abnormal"
+      ]
+    },
+    {
+      "score": 0.8,
+      "total_claims": 10,
+      "verified_claims": 8,
+      "unverified_claims": [
+        "Mereka secara langsung mengkonsumsi hama, sehingga mengurangi populasi hama tersebut",
+        "Jadi, perbedaan utama antara predator dan parasitoid adalah cara mereka mengkonsumsi hama"
+      ]
+    },
+    {
+      "score": 0.5555555555555556,
+      "total_claims": 9,
+      "verified_claims": 5,
+      "unverified_claims": [
+        "Menggunakan benih cabai yang bersertifikat dan merendamnya dengan air panas selama 30 menit atau dengan larutan 0,05-0,1% fungisida sistemik seperti Triazole atau Pirimidin",
+        "Mengumpulkan buah cabai yang terserang antraknosa dalam kantung plastik tertutup dan memusnahkannya",
+        "Menggunakan fungisida sistemik bergantian dengan yang kontak dengan pola S-K-K-K-S dan seterusnya",
+        "Menggunakan spuyer kipas yang dapat menghemat volume penyemprotan sekitar 30% untuk mengurangi volume fungisida"
+      ]
+    }
+  ],
+  "completeness": [
+    {
+      "score": 1.0,
+      "causal_elements_found": 1,
+      "causal_elements_expected": 1,
+      "explanation_depth": 0,
+      "missing_elements": []
+    },
+    {
+      "score": 0.0,
+      "causal_elements_found": 0,
+      "causal_elements_expected": 5,
+      "explanation_depth": 1,
+      "missing_elements": [
+        "Fusarium oxysporum → infeksi tanaman",
+        "infeksi tanaman → daun layu dari bawah",
+        "daun layu → menguning dan menjalar ke atas",
+        "tanaman terserang → sanitasi dengan mencabut",
+        "agens antagonis Trichoderma → menekan Fusarium"
+      ]
+    },
+    {
+      "score": 1.0,
+      "causal_elements_found": 0,
+      "causal_elements_expected": 0,
+      "explanation_depth": 0,
+      "missing_elements": []
+    },
+    {
+      "score": 1.0,
+      "causal_elements_found": 0,
+      "causal_elements_expected": 0,
+      "explanation_depth": 0,
+      "missing_elements": []
+    },
+    {
+      "score": 1.0,
+      "causal_elements_found": 0,
+      "causal_elements_expected": 0,
+      "explanation_depth": 0,
+      "missing_elements": []
+    },
+    {
+      "score": 1.0,
+      "causal_elements_found": 0,
+      "causal_elements_expected": 0,
+      "explanation_depth": 0,
+      "missing_elements": []
+    }
+  ],
+  "relevance": [
+    {
+      "score": 0.7588572948705404,
+      "first_relevant_sentence_position": 0,
+      "redundancy_ratio": 0.0699300699300699,
+      "compression_ratio": 2.0
+    },
+    {
+      "score": 0.544269172582608,
+      "first_relevant_sentence_position": 0,
+      "redundancy_ratio": 0.029197080291970767,
+      "compression_ratio": 2.0
+    },
+    {
+      "score": 0.6802286586593255,
+      "first_relevant_sentence_position": 0,
+      "redundancy_ratio": 0.07894736842105265,
+      "compression_ratio": 2.0
+    },
+    {
+      "score": 0.7903842572122812,
+      "first_relevant_sentence_position": 0,
+      "redundancy_ratio": 0.030000000000000027,
+      "compression_ratio": 2.0
+    },
+    {
+      "score": 0.7236269100467325,
+      "first_relevant_sentence_position": 0,
+      "redundancy_ratio": 0.0971428571428572,
+      "compression_ratio": 2.0
+    },
+    {
+      "score": 0.6713273202069104,
+      "first_relevant_sentence_position": 0,
+      "redundancy_ratio": 0.06707317073170727,
+      "compression_ratio": 2.0
+    }
+  ],
+  "speed": {
+    "total": {
+      "mean": 8.020800833333446,
+      "std": 9.5452986002184,
+      "p95": 28.238012030000483,
+      "p99": 28.28554008600042
+    },
+    "retrieval": {
+      "mean": 0.09378288333325852,
+      "std": 0.30244460874523516
+    },
+    "rerank": {
+      "mean": 7.833232227777747,
+      "std": 9.590042408395885
+    },
+    "generation": {
+      "mean": 0.5,
+      "std": 0.0
+    },
+    "total_queries": 18
+  },
+  "config": {
+    "groq_model": "llama-3.3-70b-versatile",
+    "embedding_model": "intfloat/multilingual-e5-large",
+    "reranker_model": "BAAI/bge-reranker-v2-m3",
+    "chroma_retrieval_k": 12,
+    "reranked_k": 6,
+    "context_window": 1
+  }
+}

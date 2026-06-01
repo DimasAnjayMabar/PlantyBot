@@ -1,0 +1,221 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_date": "2024-01-15",
+    "description": "Test dataset untuk evaluasi RAG pipeline - disesuaikan dengan 3 dokumen yang ada (1 penyakit kentang, 2 hama cabai)",
+    "documents_used": [
+      "1_penyakit_kentang.pdf",
+      "5_hama_cabai.pdf", 
+      "6_hama_cabai.pdf"
+    ],
+    "note": "RAW RAG hanya menggunakan 3 dokumen ini. IMPROVED RAG memiliki lebih banyak dokumen."
+  },
+
+  "=================== UNTUK EMBEDDER ===================": {},
+  "embedder_queries": [
+    {
+      "query": "Apa saja bakteri penyebab penyakit pada umbi kentang?",
+      "expected_chunk_ids": [],
+      "expected_keywords": ["Clavibacter", "Erwinia", "Streptomyces", "Ralstonia", "busuk cincin", "busuk lunak", "kudis", "busuk coklat"],
+      "query_type": "factual",
+      "source_doc": "1_penyakit_kentang.pdf"
+    },
+    {
+      "query": "Bagaimana cara mengendalikan penyakit antraknosa pada cabai?",
+      "expected_chunk_ids": [],
+      "expected_keywords": ["sanitasi", "seleksi benih", "pergiliran tanaman", "fungisida", "Collectrotichum"],
+      "query_type": "procedural",
+      "source_doc": "5_hama_cabai.pdf"
+    },
+    {
+      "query": "Apa saja hama utama pada tanaman cabai rawit?",
+      "expected_chunk_ids": [],
+      "expected_keywords": ["Pseudococcus", "Bemisia tabaci", "kutu putih", "kutu kebul", "thrips", "lalat buah"],
+      "query_type": "factual",
+      "source_doc": "6_hama_cabai.pdf"
+    },
+    {
+      "query": "Sebutkan musuh alami yang dapat mengendalikan hama pada tanaman cabai",
+      "expected_chunk_ids": [],
+      "expected_keywords": ["Coccinella", "Hypoponera", "parasitoid", "Scelio", "Brachymeria", "predator"],
+      "query_type": "factual",
+      "source_doc": "6_hama_cabai.pdf"
+    },
+    {
+      "query": "Apa gejala yang ditimbulkan oleh penyakit busuk cincin bakteri pada kentang?",
+      "expected_chunk_ids": [],
+      "expected_keywords": ["retakan", "coklat kemerahan", "lingkaran coklat", "cairan seperti keju", "layu"],
+      "query_type": "factual",
+      "source_doc": "1_penyakit_kentang.pdf"
+    },
+    {
+      "query": "Bagaimana pengendalian hama thrips pada tanaman cabai?",
+      "expected_chunk_ids": [],
+      "expected_keywords": ["perangkap kuning", "mulsa perak", "sanitasi", "kenikir", "musuh alami"],
+      "query_type": "procedural",
+      "source_doc": "5_hama_cabai.pdf"
+    }
+  ],
+
+  "=================== UNTUK RAG ===================": {},
+  "rag_queries": [
+    {
+      "question": "Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya!",
+      "gold_answer": "Empat jenis bakteri penyebab penyakit pada umbi kentang adalah: 1) Clavibacter michiganensis penyebab busuk cincin bakteri, 2) Erwinia carotovora penyebab busuk lunak bakteri, 3) Streptomyces scabies penyebab kudis bakteri, dan 4) Ralstonia solanacearum penyebab busuk coklat. Cara penanggulangannya meliputi pemilihan bibit sehat, memusnahkan tanaman terinfeksi, sterilisasi alat, dan rotasi tanaman.",
+      "expected_keywords": ["Clavibacter", "Erwinia", "Streptomyces", "Ralstonia", "busuk cincin", "busuk lunak", "kudis", "busuk coklat", "bibit sehat", "rotasi tanaman"],
+      "expected_causal_relations": [],
+      "source_doc": "1_penyakit_kentang.pdf"
+    },
+    {
+      "question": "Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya?",
+      "gold_answer": "Penyakit layu fusarium pada cabai disebabkan oleh cendawan Fusarium oxysporum f.sp. Gejalanya berupa daun layu mulai dari bagian bawah, menguning, dan menjalar ke atas. Pengendalian dapat dilakukan dengan sanitasi mencabut tanaman terserang, memanfaatkan agen antagonis Trichoderma spp., serta penggunaan fungisida sebagai alternatif terakhir.",
+      "expected_keywords": ["Fusarium oxysporum", "layu", "menguning", "sanitasi", "Trichoderma", "fungisida"],
+      "expected_causal_relations": ["Fusarium oxysporum → layu fusarium", "layu fusarium → daun menguning"],
+      "source_doc": "5_hama_cabai.pdf"
+    },
+    {
+      "question": "Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya?",
+      "gold_answer": "Hama utama pada tanaman cabai rawit adalah Pseudococcus sp. (kutu putih) dan Bemisia tabaci (kutu kebul) yang mendominasi populasi hama. Intensitas serangan rata-rata mencapai 6.537% yang tergolong serangan tingkat ringan. Indeks keanekaragaman hama tergolong rendah (0.92) yang menunjukkan komunitas didominasi oleh beberapa spesies saja.",
+      "expected_keywords": ["Pseudococcus", "Bemisia tabaci", "kutu putih", "kutu kebul", "6.537%", "ringan", "indeks keanekaragaman", "0.92"],
+      "expected_causal_relations": ["dominasi Pseudococcus → indeks keanekaragaman rendah"],
+      "source_doc": "6_hama_cabai.pdf"
+    }
+  ],
+
+  "=================== UNTUK LLM ===================": {},
+  "llm_prompts": [
+    "Jelaskan 4 jenis penyakit bakteri pada kentang",
+    "Apa perbedaan hama thrips dan kutu kebul pada tanaman cabai?",
+    "Sebutkan musuh alami yang dapat mengendalikan hama pada tanaman cabai",
+    "Bagaimana cara mengendalikan penyakit layu fusarium?",
+    "Apa gejala penyakit busuk cincin bakteri pada kentang?",
+    "Jelaskan indeks keanekaragaman hama pada tanaman cabai rawit"
+  ],
+
+  "compliance_tests": [
+    {
+      "name": "bahasa_indonesia_wajib",
+      "system_instruction": "Anda adalah asisten pertanian Agribot. WAJIB menjawab dalam Bahasa Indonesia. Gunakan kata 'saya' untuk merujuk diri sendiri.",
+      "user_query": "What are the four types of bacterial diseases in potatoes?",
+      "expected_behavior": "bahasa_indonesia",
+      "threshold": 0.9
+    },
+    {
+      "name": "gunakan_kata_saya",
+      "system_instruction": "Selalu gunakan kata 'saya' untuk merujuk diri sendiri. JANGAN gunakan kata 'kami'.",
+      "user_query": "Siapa kamu dan apa yang bisa kamu bantu?",
+      "expected_behavior": "use_saya",
+      "threshold": 1.0
+    },
+    {
+      "name": "jawab_berdasarkan_konteks",
+      "system_instruction": "Jawab pertanyaan hanya berdasarkan KONTEKS JURNAL yang diberikan. Jangan mengarang informasi di luar konteks.",
+      "user_query": "Apa penyebab penyakit antraknosa?",
+      "expected_behavior": "no_citation",
+      "threshold": 0.7
+    },
+    {
+      "name": "tidak_menyebut_sumber",
+      "system_instruction": "JANGAN sebutkan 'berdasarkan jurnal', 'menurut penelitian', atau '[1]' dalam jawaban. Langsung berikan jawaban.",
+      "user_query": "Bagaimana cara mengendalikan hama thrips?",
+      "expected_behavior": "no_citation",
+      "threshold": 0.9
+    },
+    {
+      "name": "maksimal_3_paragraf",
+      "system_instruction": "Jawab maksimal 3 paragraf untuk pertanyaan yang membutuhkan penjelasan panjang.",
+      "user_query": "Jelaskan secara lengkap siklus hidup dan pengendalian hama kutu kebul pada tanaman cabai",
+      "expected_behavior": "max_paragraphs",
+      "expected_value": 3,
+      "threshold": 0.8
+    },
+    {
+      "name": "jawab_dengan_poin",
+      "system_instruction": "Untuk pertanyaan yang meminta daftar atau langkah-langkah, berikan jawaban dalam format poin-poin (bullet points).",
+      "user_query": "Sebutkan 4 bakteri penyebab penyakit pada umbi kentang!",
+      "expected_behavior": "format_list",
+      "threshold": 0.8
+    }
+  ],
+
+  "=================== UNTUK CAUSAL GROUND TRUTH ===================": {},
+  "causal_ground_truth": {
+    "Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya?": [
+      "Fusarium oxysporum → infeksi tanaman",
+      "infeksi tanaman → daun layu dari bawah",
+      "daun layu → menguning dan menjalar ke atas",
+      "tanaman terserang → sanitasi dengan mencabut",
+      "agens antagonis Trichoderma → menekan Fusarium"
+    ],
+    "Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya?": [
+      "Pseudococcus sp. dominan → indeks keanekaragaman rendah",
+      "Bemisia tabaci dominan → indeks keanekaragaman rendah",
+      "populasi hama tinggi → intensitas serangan 6.537%",
+      "penggunaan pestisida → populasi hama menurun"
+    ],
+    "Bagaimana gejala serangan thrips pada tanaman cabai?": [
+      "thrips menghisap cairan daun → bercak keperakan",
+      "thrips → daun mengeriting dan keriput",
+      "serangan berat → pertumbuhan kerdil",
+      "thrips sebagai vektor → penyakit virus mosaik"
+    ],
+    "Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai?": [
+      "predator → kontak fisik langsung",
+      "parasitoid → telur di dalam inang",
+      "larva parasitoid → memakan inang dari dalam",
+      "keduanya → menekan populasi hama"
+    ]
+  },
+
+  "=================== UNTUK RETRIEVAL GOLDEN SET ===================": {},
+  "retrieval_golden_set": {
+    "query_keywords": [
+      "bakteri kentang",
+      "Clavibacter", 
+      "Erwinia",
+      "Streptomyces",
+      "Ralstonia",
+      "fusarium cabai",
+      "antraknosa cabai",
+      "thrips cabai",
+      "kutu kebul",
+      "Pseudococcus",
+      "Bemisia tabaci",
+      "musuh alami",
+      "predator cabai",
+      "parasitoid"
+    ]
+  },
+
+  "=================== UNTUK INTENT DETECTION TEST ===================": {},
+  "intent_test_cases": [
+    {
+      "query": "Halo, apa kabar?",
+      "expected_intent": "social"
+    },
+    {
+      "query": "Terima kasih banyak atas bantuannya",
+      "expected_intent": "social"
+    },
+    {
+      "query": "Siapa namamu?",
+      "expected_intent": "social"
+    },
+    {
+      "query": "Apa penyebab penyakit antraknosa pada cabai?",
+      "expected_intent": "knowledge"
+    },
+    {
+      "query": "Jelaskan cara mengendalikan hama thrips",
+      "expected_intent": "knowledge"
+    },
+    {
+      "query": "Bagaimana gejala busuk cincin bakteri pada kentang?",
+      "expected_intent": "knowledge"
+    },
+    {
+      "query": "Sebutkan 4 bakteri penyebab penyakit umbi kentang",
+      "expected_intent": "knowledge"
+    }
+  ]
+}

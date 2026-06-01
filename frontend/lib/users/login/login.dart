@@ -257,7 +257,7 @@ class _LoginPageState extends State<LoginPage>
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Selamat datang kembali di AgriBot.',
+                        'Selamat datang kembali di TandurBot.',
                         style: GoogleFonts.poppins(
                           fontSize: 13,
                           color: _textMuted,
@@ -393,7 +393,7 @@ class _Logo extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Text(
-          'AgriBot',
+          'TandurBot',
           style: GoogleFonts.poppins(
             fontSize: 22,
             fontWeight: FontWeight.w700,

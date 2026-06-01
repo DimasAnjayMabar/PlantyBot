@@ -491,8 +491,17 @@ async def upload_knowledge_pdf(
     judul: str | None = Form(default=None),
     penulis: str | None = Form(default=None),
     tahun: str | None = Form(default=None),
+    embedder_type: str = Form(default="improved"),
+    db: Session = Depends(get_db),  # ← tambahkan db
     current_session: UserAuth = Depends(get_current_session),
 ):
+    # ── Validasi embedder_type ────────────────────────────────────────────────
+    if embedder_type not in ("improved", "raw"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Parameter 'embedder_type' harus 'improved' atau 'raw'.",
+        )
+
     # ── Validasi tipe MIME ────────────────────────────────────────────────────
     if file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(
@@ -523,12 +532,14 @@ async def upload_knowledge_pdf(
 
     try:
         result = KnowledgeService.upload_pdf(
-            file_bytes  = file_bytes,
-            filename    = file.filename or "upload.pdf",
-            judul       = judul,
-            penulis     = penulis,
-            tahun       = tahun,
-            user_id     = current_session.user_id,
+            file_bytes    = file_bytes,
+            filename      = file.filename or "upload.pdf",
+            judul         = judul,
+            penulis       = penulis,
+            tahun         = tahun,
+            user_id       = current_session.user_id,
+            embedder_type = embedder_type,
+            db = db
         )
         return JSONResponse(
             status_code=status.HTTP_202_ACCEPTED,
@@ -701,3 +712,89 @@ def get_active_model(
             }
         },
     )
+
+# controller_chats.py - tambah setelah endpoint model management
+
+# =============================================================================
+# RAG MODE MANAGEMENT
+# =============================================================================
+
+@router.get("/rag/mode", status_code=status.HTTP_200_OK)
+def get_rag_mode(
+    current_session: UserAuth = Depends(get_current_session),
+):
+    """
+    Mendapatkan mode RAG yang sedang aktif ('improved' atau 'regular').
+    """
+    from config import CONFIG
+    
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "success": True,
+            "message": "Mode RAG berhasil diambil.",
+            "data": {
+                "mode": CONFIG.get("rag_mode", "improved"),
+            }
+        },
+    )
+
+
+@router.post("/rag/set-mode", status_code=status.HTTP_200_OK)
+async def set_rag_mode(
+    request: Request,
+    current_session: UserAuth = Depends(get_current_session),
+):
+    """
+    Mengganti mode RAG antara 'improved' dan 'regular'.
+    
+    - improved: pipeline lengkap dengan Neo4j context enrichment
+    - regular:  pipeline sederhana (retrieval + rerank + LLM)
+    """
+    import json
+    
+    try:
+        body = await request.json()
+        mode = body.get("mode", "").strip().lower()
+        
+        if mode not in ("improved", "regular"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Parameter 'mode' harus 'improved' atau 'regular'.",
+            )
+        
+        from config import CONFIG
+        
+        CONFIG["rag_mode"] = mode
+        
+        logger.info(
+            f"RAG mode switched → mode={mode}  user_id={current_session.user_id}"
+        )
+        
+        # Tidak perlu reload pipeline karena hanya mode retrieval yang berubah
+        # Pipeline masih menggunakan model yang sama
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": True,
+                "message": f"Berhasil beralih ke mode RAG {mode}.",
+                "data": {
+                    "mode": mode,
+                },
+            },
+        )
+        
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid JSON body.",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"POST /rag/set-mode error → {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Gagal mengganti mode RAG: {str(e)}",
+        )

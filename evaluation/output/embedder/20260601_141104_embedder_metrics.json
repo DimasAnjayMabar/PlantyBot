@@ -1,0 +1,284 @@
+{
+  "retrieval_metrics": {
+    "overall": {
+      "recall@1": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0
+      },
+      "recall@3": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0
+      },
+      "recall@5": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0
+      },
+      "recall@10": {
+        "mean": 0.0,
+        "std": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "per_query_type": {
+      "factual": {
+        "recall@1": {
+          "mean": 0.0,
+          "std": 0.0,
+          "count": 4
+        },
+        "recall@3": {
+          "mean": 0.0,
+          "std": 0.0,
+          "count": 4
+        },
+        "recall@5": {
+          "mean": 0.0,
+          "std": 0.0,
+          "count": 4
+        },
+        "recall@10": {
+          "mean": 0.0,
+          "std": 0.0,
+          "count": 4
+        }
+      },
+      "procedural": {
+        "recall@1": {
+          "mean": 0.0,
+          "std": 0.0,
+          "count": 2
+        },
+        "recall@3": {
+          "mean": 0.0,
+          "std": 0.0,
+          "count": 2
+        },
+        "recall@5": {
+          "mean": 0.0,
+          "std": 0.0,
+          "count": 2
+        },
+        "recall@10": {
+          "mean": 0.0,
+          "std": 0.0,
+          "count": 2
+        }
+      }
+    },
+    "per_query": [
+      {
+        "query": "Apa saja bakteri penyebab penyakit pada umbi kentang?",
+        "query_type": "factual",
+        "metrics": {
+          "recall@1": 0,
+          "recall@3": 0,
+          "recall@5": 0,
+          "recall@10": 0,
+          "mrr": 0
+        },
+        "retrieved_count": 10,
+        "expected_count": 0
+      },
+      {
+        "query": "Bagaimana cara mengendalikan penyakit antraknosa pada cabai?",
+        "query_type": "procedural",
+        "metrics": {
+          "recall@1": 0,
+          "recall@3": 0,
+          "recall@5": 0,
+          "recall@10": 0,
+          "mrr": 0
+        },
+        "retrieved_count": 10,
+        "expected_count": 0
+      },
+      {
+        "query": "Apa saja hama utama pada tanaman cabai rawit?",
+        "query_type": "factual",
+        "metrics": {
+          "recall@1": 0,
+          "recall@3": 0,
+          "recall@5": 0,
+          "recall@10": 0,
+          "mrr": 0
+        },
+        "retrieved_count": 10,
+        "expected_count": 0
+      },
+      {
+        "query": "Sebutkan musuh alami yang dapat mengendalikan hama pada tanaman cabai",
+        "query_type": "factual",
+        "metrics": {
+          "recall@1": 0,
+          "recall@3": 0,
+          "recall@5": 0,
+          "recall@10": 0,
+          "mrr": 0
+        },
+        "retrieved_count": 10,
+        "expected_count": 0
+      },
+      {
+        "query": "Apa gejala yang ditimbulkan oleh penyakit busuk cincin bakteri pada kentang?",
+        "query_type": "factual",
+        "metrics": {
+          "recall@1": 0,
+          "recall@3": 0,
+          "recall@5": 0,
+          "recall@10": 0,
+          "mrr": 0
+        },
+        "retrieved_count": 10,
+        "expected_count": 0
+      },
+      {
+        "query": "Bagaimana pengendalian hama thrips pada tanaman cabai?",
+        "query_type": "procedural",
+        "metrics": {
+          "recall@1": 0,
+          "recall@3": 0,
+          "recall@5": 0,
+          "recall@10": 0,
+          "mrr": 0
+        },
+        "retrieved_count": 10,
+        "expected_count": 0
+      }
+    ],
+    "avg_mrr": 0.0,
+    "std_mrr": 0.0,
+    "total_queries": 6
+  },
+  "graph_vs_raw": {
+    "graph": {
+      "avg_context_length": 3267.266666666667,
+      "std_context_length": 1744.5711017006124,
+      "avg_entity_coverage": 7.533333333333333,
+      "std_entity_coverage": 6.849493087488705,
+      "avg_semantic_similarity": 0.13972981435378795
+    },
+    "raw": {
+      "avg_context_length": 1945.6,
+      "std_context_length": 64.28250150701979,
+      "avg_entity_coverage": 4.833333333333333,
+      "std_entity_coverage": 5.972622725589004,
+      "avg_semantic_similarity": 0.12934962163557814
+    },
+    "improvement": {
+      "context_length_pct": 67.9310581140351,
+      "entity_coverage_pct": 55.86206896551725,
+      "semantic_similarity_pct": 8.024911543579416
+    },
+    "per_query": [
+      {
+        "query": "Apa saja bakteri penyebab penyakit pada umbi kentang?",
+        "graph_avg_length": 3954.0,
+        "raw_avg_length": 1937.8,
+        "graph_avg_entities": 9.0,
+        "raw_avg_entities": 7.4
+      },
+      {
+        "query": "Bagaimana cara mengendalikan penyakit antraknosa pada cabai?",
+        "graph_avg_length": 2032.2,
+        "raw_avg_length": 1935.6,
+        "graph_avg_entities": 10.0,
+        "raw_avg_entities": 4.0
+      },
+      {
+        "query": "Apa saja hama utama pada tanaman cabai rawit?",
+        "graph_avg_length": 4777.2,
+        "raw_avg_length": 1908.6,
+        "graph_avg_entities": 8.6,
+        "raw_avg_entities": 5.2
+      },
+      {
+        "query": "Sebutkan musuh alami yang dapat mengendalikan hama pada tanaman cabai",
+        "graph_avg_length": 2477.8,
+        "raw_avg_length": 1942.8,
+        "graph_avg_entities": 7.0,
+        "raw_avg_entities": 6.6
+      },
+      {
+        "query": "Apa gejala yang ditimbulkan oleh penyakit busuk cincin bakteri pada kentang?",
+        "graph_avg_length": 4842.6,
+        "raw_avg_length": 1996.2,
+        "graph_avg_entities": 2.8,
+        "raw_avg_entities": 4.0
+      },
+      {
+        "query": "Bagaimana pengendalian hama thrips pada tanaman cabai?",
+        "graph_avg_length": 1519.8,
+        "raw_avg_length": 1952.6,
+        "graph_avg_entities": 7.8,
+        "raw_avg_entities": 1.8
+      }
+    ]
+  },
+  "diversity_metrics": {
+    "overall": {
+      "avg_unique_journals": 1.3333333333333333,
+      "avg_unique_headings": 4.0,
+      "avg_diversity_score": 0.09517749405986244,
+      "std_diversity_score": 0.03494230084673639
+    },
+    "per_query": [
+      {
+        "query": "Apa saja bakteri penyebab penyakit pada umbi kentang?",
+        "unique_journals": 1,
+        "unique_headings": 5,
+        "diversity_score": 0.06640088566898972,
+        "total_chunks": 5
+      },
+      {
+        "query": "Bagaimana cara mengendalikan penyakit antraknosa pada cabai?",
+        "unique_journals": 1,
+        "unique_headings": 3,
+        "diversity_score": 0.07015803898631356,
+        "total_chunks": 5
+      },
+      {
+        "query": "Apa saja hama utama pada tanaman cabai rawit?",
+        "unique_journals": 1,
+        "unique_headings": 4,
+        "diversity_score": 0.10306428574807724,
+        "total_chunks": 5
+      },
+      {
+        "query": "Sebutkan musuh alami yang dapat mengendalikan hama pada tanaman cabai",
+        "unique_journals": 2,
+        "unique_headings": 5,
+        "diversity_score": 0.16033223923316076,
+        "total_chunks": 5
+      },
+      {
+        "query": "Apa gejala yang ditimbulkan oleh penyakit busuk cincin bakteri pada kentang?",
+        "unique_journals": 1,
+        "unique_headings": 2,
+        "diversity_score": 0.05929467755132545,
+        "total_chunks": 5
+      },
+      {
+        "query": "Bagaimana pengendalian hama thrips pada tanaman cabai?",
+        "unique_journals": 2,
+        "unique_headings": 5,
+        "diversity_score": 0.11181483717130791,
+        "total_chunks": 5
+      }
+    ]
+  },
+  "config": {
+    "groq_model": "llama-3.3-70b-versatile",
+    "embedding_model": "intfloat/multilingual-e5-large",
+    "reranker_model": "BAAI/bge-reranker-v2-m3",
+    "chroma_retrieval_k": 12,
+    "reranked_k": 6,
+    "context_window": 1
+  }
+}

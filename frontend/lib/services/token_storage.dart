@@ -116,3 +116,23 @@ class ModelPreferenceStorage {
     await TokenStorage.delete(key: _keySelectedMode);
   }
 }
+
+class RAGPreferenceStorage{
+  static const String _keyRagMode = 'selected_rag_mode';
+
+  /// Simpan mode RAG yang dipilih user
+  static Future<void> saveRagMode(String mode) async {
+      await TokenStorage.write(key: _keyRagMode, value: mode);
+      print('💾 RAG mode preference saved: $mode');
+  }
+
+  /// Ambil mode RAG yang tersimpan
+  static Future<String?> getSavedRagMode() async {
+      return await TokenStorage.read(key: _keyRagMode);
+  }
+
+  /// Hapus preference mode RAG
+  static Future<void> clearRagMode() async {
+      await TokenStorage.delete(key: _keyRagMode);
+  }
+}

@@ -31,6 +31,8 @@ class InputBar extends StatefulWidget {
     required this.onUploadPdfs,
     required this.onSetModel,
     required this.onGetModels,
+    required this.onSetRagMode,
+    required this.onGetRagMode,
     this.pendingDetailId,
     this.onStop,
   });
@@ -45,6 +47,8 @@ class InputBar extends StatefulWidget {
   }) onUploadPdfs;
   final Future<bool> Function(String mode, {String? path}) onSetModel;
   final Future<List<Map<String, dynamic>>> Function() onGetModels;
+  final Future<bool> Function(String mode) onSetRagMode;
+  final Future<String> Function() onGetRagMode;
   final int? pendingDetailId;
   final VoidCallback? onStop;
 
@@ -61,11 +65,15 @@ class _InputBarState extends State<InputBar> {
   String _activeModelId = 'llama-3.3-70b-versatile';
   bool _modelSwitching = false;
 
+  String _ragMode = 'improved';  // 'improved' atau 'regular'
+  bool _ragModeSwitching = false;
+
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_onTextChanged);
     _initSpeech();
+    _initRagMode();
   }
 
   void _onTextChanged() {
@@ -80,6 +88,17 @@ class _InputBarState extends State<InputBar> {
     widget.controller.removeListener(_onTextChanged);
     _speechToText.stop();
     super.dispose();
+  }
+
+  Future<void> _initRagMode() async {
+    try {
+      final mode = await widget.onGetRagMode();
+      if (mounted) {
+        setState(() => _ragMode = mode);
+      }
+    } catch (e) {
+      debugPrint('Error loading RAG mode: $e');
+    }
   }
 
   void _initSpeech() async {
@@ -120,6 +139,281 @@ class _InputBarState extends State<InputBar> {
   void _stopListening() async {
     await _speechToText.stop();
     if (mounted) setState(() => _isListening = false);
+  }
+
+  // ── Dialog untuk memilih RAG mode ────────────────────────────────────────
+  void _showRagModeDialog(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    String selectedMode = _ragMode;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDS) => Dialog(
+          backgroundColor: const Color(0xFF111111),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFF1A1A1A)),
+          ),
+          child: Container(
+            width: isMobile ? double.infinity : 360,
+            padding: EdgeInsets.all(isMobile ? 20 : 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16DB65).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.tune_rounded,
+                        color: Color(0xFF16DB65),
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Mode RAG',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.of(ctx).pop(),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Color(0xFF666666),
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Pilih metode retrieval untuk menjawab pertanyaan teknis',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: const Color(0xFF888888),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // ── Improved RAG option ─────────────────────────────────────
+                _buildRagModeOption(
+                  mode: 'improved',
+                  title: 'Improved RAG',
+                  description: 'Lebih akurat untuk pertanyaan kompleks',
+                  icon: Icons.auto_awesome_rounded,
+                  selectedMode: selectedMode,
+                  onSelect: () => setDS(() => selectedMode = 'improved'),
+                ),
+                const SizedBox(height: 8),
+                
+                // ── Regular RAG option ──────────────────────────────────────
+                _buildRagModeOption(
+                  mode: 'regular',
+                  title: 'Regular RAG',
+                  description: 'Lebih cepat, cocok untuk pertanyaan langsung',
+                  icon: Icons.speed_rounded,
+                  selectedMode: selectedMode,
+                  onSelect: () => setDS(() => selectedMode = 'regular'),
+                ),
+                
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          'Batal',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFF888888),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: selectedMode == _ragMode
+                            ? null
+                            : () async {
+                                Navigator.of(ctx).pop();
+                                if (mounted) {
+                                  setState(() => _ragModeSwitching = true);
+                                }
+                                try {
+                                  final success = await widget.onSetRagMode(selectedMode);
+                                  if (mounted && success) {
+                                    setState(() {
+                                      _ragMode = selectedMode;
+                                      _ragModeSwitching = false;
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          selectedMode == 'improved'
+                                              ? 'Mode RAG: Improved (Neo4j + context)'
+                                              : 'Mode RAG: Regular (Simple retrieval)',
+                                        ),
+                                        backgroundColor: const Color(0xFF16DB65),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  } else if (mounted) {
+                                    setState(() => _ragModeSwitching = false);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Gagal mengganti mode RAG'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    setState(() => _ragModeSwitching = false);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF16DB65),
+                          disabledBackgroundColor: const Color(0xFF1E1E1E),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Terapkan',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: selectedMode == _ragMode
+                                ? const Color(0xFF555555)
+                                : Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRagModeOption({
+    required String mode,
+    required String title,
+    required String description,
+    required IconData icon,
+    required String selectedMode,
+    required VoidCallback onSelect,
+  }) {
+    final isSelected = selectedMode == mode;
+    final Color accent = mode == 'improved' 
+        ? const Color(0xFF16DB65) 
+        : const Color(0xFFFFAA33);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onSelect,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? accent.withOpacity(0.08) : const Color(0xFF151515),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? accent.withOpacity(0.5) : const Color(0xFF222222),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected ? accent.withOpacity(0.15) : const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isSelected ? accent : const Color(0xFF666666),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? Colors.white : const Color(0xFFAAAAAA),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.5,
+                      color: const Color(0xFF555555),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: accent,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  size: 12,
+                  color: Colors.black,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Model Selector Dialog ─────────────────────────────────────────────────
@@ -481,6 +775,7 @@ class _InputBarState extends State<InputBar> {
     List<PdfUploadFile> _selectedFiles = [];
     bool _isUploading = false;
     int _uploadDone = 0;
+    String _embedderType = 'improved'; // 'improved' atau 'raw'
 
     showDialog(
       context: context,
@@ -498,7 +793,11 @@ class _InputBarState extends State<InputBar> {
 
             final newFiles = result.files
                 .where((f) => f.bytes != null)
-                .map((f) => PdfUploadFile(bytes: f.bytes!, name: f.name))
+                .map((f) => PdfUploadFile(
+                      bytes: f.bytes!,
+                      name: f.name,
+                      embedderType: _embedderType,
+                    ))
                 .toList();
 
             setDialogState(() {
@@ -523,8 +822,20 @@ class _InputBarState extends State<InputBar> {
               _uploadDone = 0;
             });
 
+            // Rebuild list dengan embedderType terbaru sebelum upload
+            final filesToUpload = _selectedFiles
+                .map((f) => PdfUploadFile(
+                      bytes: f.bytes,
+                      name: f.name,
+                      judul: f.judul,
+                      penulis: f.penulis,
+                      tahun: f.tahun,
+                      embedderType: _embedderType,
+                    ))
+                .toList();
+
             await widget.onUploadPdfs(
-              _selectedFiles,
+              filesToUpload,
               onProgress: (done, total) {
                 if (ctx.mounted) {
                   setDialogState(() => _uploadDone = done);
@@ -596,7 +907,181 @@ class _InputBarState extends State<InputBar> {
                         color: const Color(0xFFA3A3A3),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+
+                    // ── Pilihan Embedder ──────────────────────────────────
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D0D0D),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF2A2A2A)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.tune_rounded,
+                                  size: 14,
+                                  color: Color(0xFF16DB65),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Mode Embedder',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF16DB65),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1, color: Color(0xFF1E1E1E)),
+                          // Improved option
+                          InkWell(
+                            onTap: _isUploading
+                                ? null
+                                : () => setDialogState(
+                                      () => _embedderType = 'improved',
+                                    ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 150),
+                                    width: 16,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: _embedderType == 'improved'
+                                            ? const Color(0xFF16DB65)
+                                            : const Color(0xFF444444),
+                                        width: 2,
+                                      ),
+                                      color: _embedderType == 'improved'
+                                          ? const Color(0xFF16DB65)
+                                          : Colors.transparent,
+                                    ),
+                                    child: _embedderType == 'improved'
+                                        ? const Icon(
+                                            Icons.check,
+                                            size: 10,
+                                            color: Colors.black,
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Improved Embedder',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: _embedderType == 'improved'
+                                                ? Colors.white
+                                                : const Color(0xFF888888),
+                                          ),
+                                        ),
+                                        Text(
+                                          'Akurasi lebih tinggi',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 10,
+                                            color: const Color(0xFF555555),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const Divider(height: 1, color: Color(0xFF1A1A1A)),
+                          // Raw option
+                          InkWell(
+                            onTap: _isUploading
+                                ? null
+                                : () => setDialogState(
+                                      () => _embedderType = 'raw',
+                                    ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 150),
+                                    width: 16,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: _embedderType == 'raw'
+                                            ? const Color(0xFFFFAA33)
+                                            : const Color(0xFF444444),
+                                        width: 2,
+                                      ),
+                                      color: _embedderType == 'raw'
+                                          ? const Color(0xFFFFAA33)
+                                          : Colors.transparent,
+                                    ),
+                                    child: _embedderType == 'raw'
+                                        ? const Icon(
+                                            Icons.check,
+                                            size: 10,
+                                            color: Colors.black,
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Raw Embedder',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: _embedderType == 'raw'
+                                                ? Colors.white
+                                                : const Color(0xFF888888),
+                                          ),
+                                        ),
+                                        Text(
+                                          'Embed teks mentah langsung',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 10,
+                                            color: const Color(0xFF555555),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     GestureDetector(
                       onTap: _isUploading ? null : pickFiles,
                       child: Container(
@@ -846,6 +1331,8 @@ class _InputBarState extends State<InputBar> {
               isListening: _isListening,
               speechEnabled: _speechEnabled,
               modelSwitching: _modelSwitching,
+              ragModeSwitching: _ragModeSwitching,
+              ragMode: _ragMode,
               activeModelId: _activeModelId,
               controller: widget.controller,
               focusNode: widget.focusNode,
@@ -855,6 +1342,7 @@ class _InputBarState extends State<InputBar> {
               onStopListening: _stopListening,
               onShowModelDialog: _showModelDialog,
               onShowUploadDialog: _showUploadDialog,
+              onShowRagModeDialog: _showRagModeDialog,
             )
           : _DesktopInputLayout(
               hasText: _hasText,
@@ -863,6 +1351,8 @@ class _InputBarState extends State<InputBar> {
               isListening: _isListening,
               speechEnabled: _speechEnabled,
               modelSwitching: _modelSwitching,
+              ragModeSwitching: _ragModeSwitching,
+              ragMode: _ragMode,
               activeModelId: _activeModelId,
               controller: widget.controller,
               focusNode: widget.focusNode,
@@ -872,6 +1362,7 @@ class _InputBarState extends State<InputBar> {
               onStopListening: _stopListening,
               onShowModelDialog: _showModelDialog,
               onShowUploadDialog: _showUploadDialog,
+              onShowRagModeDialog: _showRagModeDialog,
             ),
     );
   }
@@ -889,6 +1380,8 @@ class _MobileInputLayout extends StatelessWidget {
     required this.isListening,
     required this.speechEnabled,
     required this.modelSwitching,
+    required this.ragModeSwitching,
+    required this.ragMode,
     required this.activeModelId,
     required this.controller,
     required this.focusNode,
@@ -898,6 +1391,7 @@ class _MobileInputLayout extends StatelessWidget {
     required this.onStopListening,
     required this.onShowModelDialog,
     required this.onShowUploadDialog,
+    required this.onShowRagModeDialog,
   });
 
   final bool hasText;
@@ -906,6 +1400,8 @@ class _MobileInputLayout extends StatelessWidget {
   final bool isListening;
   final bool speechEnabled;
   final bool modelSwitching;
+  final bool ragModeSwitching;
+  final String ragMode;
   final String activeModelId;
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -915,6 +1411,7 @@ class _MobileInputLayout extends StatelessWidget {
   final VoidCallback onStopListening;
   final Future<void> Function(BuildContext) onShowModelDialog;
   final void Function(BuildContext) onShowUploadDialog;
+  final void Function(BuildContext) onShowRagModeDialog;
 
   String _getModelShortName(String modelId) {
     if (modelId.contains('mistral')) return 'Mistral';
@@ -922,16 +1419,77 @@ class _MobileInputLayout extends StatelessWidget {
     return 'Llama';
   }
 
+  String _getRagModeShortName(String mode) {
+    return mode == 'improved' ? 'Improved' : 'Regular';
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Check if send button should be disabled due to model switching
     final isSendDisabled = sending || !hasText || modelSwitching;
 
     return Column(
       children: [
-        // Baris pertama: Tombol Model (kiri) dan Tombol Upload (kanan)
+        // Baris pertama: Tombol RAG Mode, Model, Upload (3 tombol)
         Row(
           children: [
+            // Tombol RAG Mode
+            Expanded(
+              child: Tooltip(
+                message: ragMode == 'improved' 
+                    ? 'Mode: Improved (Neo4j + Context)' 
+                    : 'Mode: Regular (Simple)',
+                child: ElevatedButton(
+                  onPressed: ragModeSwitching ? null : () => onShowRagModeDialog(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A1A1A),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: ragModeSwitching
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFFFFAA33),
+                          ),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              ragMode == 'improved' 
+                                  ? Icons.auto_awesome_rounded 
+                                  : Icons.speed_rounded,
+                              size: 15,
+                              color: ragMode == 'improved' 
+                                  ? const Color(0xFF16DB65) 
+                                  : const Color(0xFFFFAA33),
+                            ),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                _getRagModeShortName(ragMode),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: ragMode == 'improved' 
+                                      ? const Color(0xFF16DB65) 
+                                      : const Color(0xFFFFAA33),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Tombol Model
             Expanded(
               child: Tooltip(
                 message: 'Model: $activeModelId',
@@ -980,6 +1538,7 @@ class _MobileInputLayout extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
+            // Tombol Upload
             Expanded(
               child: Tooltip(
                 message: 'Unggah PDF pengetahuan bot',
@@ -1018,74 +1577,59 @@ class _MobileInputLayout extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        // TextField (besar di tengah)
+        // TextField (besar di tengah) - FIXED VERSION with onSubmitted
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 75, minHeight: 70),
-          child: Shortcuts(
-            shortcuts: <LogicalKeySet, Intent>{
-              LogicalKeySet(LogicalKeyboardKey.enter): const SendMessageIntent(),
-              LogicalKeySet(LogicalKeyboardKey.numpadEnter): const SendMessageIntent(),
-            },
-            child: Actions(
-              actions: <Type, Action<Intent>>{
-                SendMessageIntent: CallbackAction<SendMessageIntent>(
-                  onInvoke: (intent) {
-                    // Also check modelSwitching here
-                    if (!sending && !modelSwitching && controller.text.trim().isNotEmpty) {
-                      onSend();
-                    }
-                    return null;
-                  },
-                ),
-              },
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                maxLines: null,
-                expands: true,
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.newline,
-                enabled: !sending && !modelSwitching,
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  color: Colors.white,
-                  height: 1.5,
-                ),
-                cursorColor: const Color(0xFF16DB65),
-                decoration: InputDecoration(
-                  hintText: 'Ketik pertanyaan Anda...',
-                  hintStyle: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: const Color(0xFFA3A3A3),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFF111111),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF16DB65),
-                      width: 1.5,
-                    ),
-                  ),
-                  disabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
-                  ),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.send,
+            enabled: !sending && !modelSwitching,
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              color: Colors.white,
+              height: 1.5,
+            ),
+            cursorColor: const Color(0xFF16DB65),
+            decoration: InputDecoration(
+              hintText: 'Ketik pertanyaan Anda...',
+              hintStyle: GoogleFonts.poppins(
+                fontSize: 14,
+                color: const Color(0xFFA3A3A3),
+              ),
+              filled: true,
+              fillColor: const Color(0xFF111111),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Color(0xFF16DB65),
+                  width: 1.5,
                 ),
               ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
+              ),
             ),
+            onSubmitted: (_) {
+              if (!sending && !modelSwitching && controller.text.trim().isNotEmpty) {
+                onSend();
+              }
+            },
           ),
         ),
         const SizedBox(height: 10),
@@ -1228,6 +1772,8 @@ class _DesktopInputLayout extends StatelessWidget {
     required this.isListening,
     required this.speechEnabled,
     required this.modelSwitching,
+    required this.ragModeSwitching,
+    required this.ragMode,
     required this.activeModelId,
     required this.controller,
     required this.focusNode,
@@ -1237,6 +1783,7 @@ class _DesktopInputLayout extends StatelessWidget {
     required this.onStopListening,
     required this.onShowModelDialog,
     required this.onShowUploadDialog,
+    required this.onShowRagModeDialog,
   });
 
   final bool hasText;
@@ -1245,6 +1792,8 @@ class _DesktopInputLayout extends StatelessWidget {
   final bool isListening;
   final bool speechEnabled;
   final bool modelSwitching;
+  final bool ragModeSwitching;
+  final String ragMode;
   final String activeModelId;
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -1254,6 +1803,11 @@ class _DesktopInputLayout extends StatelessWidget {
   final VoidCallback onStopListening;
   final Future<void> Function(BuildContext) onShowModelDialog;
   final void Function(BuildContext) onShowUploadDialog;
+  final void Function(BuildContext) onShowRagModeDialog;
+
+  String _getRagModeShortName(String mode) {
+    return mode == 'improved' ? 'Improved' : 'Regular';
+  }
 
   String _getModelShortName(String modelId) {
     if (modelId.contains('mistral')) return 'Mistral';
@@ -1263,7 +1817,6 @@ class _DesktopInputLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Check if send button should be disabled due to model switching
     final isSendDisabled = sending || !hasText || modelSwitching;
 
     return Row(
@@ -1293,6 +1846,62 @@ class _DesktopInputLayout extends StatelessWidget {
                   size: 20,
                 ),
               ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // Tombol Pilih RAG Mode
+        SizedBox(
+          height: 48,
+          child: Tooltip(
+            message: ragMode == 'improved' 
+                ? 'Mode: Improved (Neo4j + Context)' 
+                : 'Mode: Regular (Simple)',
+            child: ElevatedButton(
+              onPressed: ragModeSwitching ? null : () => onShowRagModeDialog(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A1A1A),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: ragModeSwitching
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFFFFAA33),
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          ragMode == 'improved' 
+                              ? Icons.auto_awesome_rounded 
+                              : Icons.speed_rounded,
+                          size: 15,
+                          color: ragMode == 'improved' 
+                              ? const Color(0xFF16DB65) 
+                              : const Color(0xFFFFAA33),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          _getRagModeShortName(ragMode),
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: ragMode == 'improved' 
+                                ? const Color(0xFF16DB65) 
+                                : const Color(0xFFFFAA33),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ),
@@ -1346,73 +1955,59 @@ class _DesktopInputLayout extends StatelessWidget {
         ),
         const SizedBox(width: 8),
 
-        // TextField (desktop)
+        // TextField (desktop) - FIXED VERSION with onSubmitted
         Expanded(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 150),
-            child: Shortcuts(
-              shortcuts: <LogicalKeySet, Intent>{
-                LogicalKeySet(LogicalKeyboardKey.enter): const SendMessageIntent(),
-                LogicalKeySet(LogicalKeyboardKey.numpadEnter): const SendMessageIntent(),
-              },
-              child: Actions(
-                actions: <Type, Action<Intent>>{
-                  SendMessageIntent: CallbackAction<SendMessageIntent>(
-                    onInvoke: (intent) {
-                      // Also check modelSwitching here
-                      if (!sending && !modelSwitching && controller.text.trim().isNotEmpty) {
-                        onSend();
-                      }
-                      return null;
-                    },
-                  ),
-                },
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  textInputAction: TextInputAction.newline,
-                  enabled: !sending && !modelSwitching,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.white,
-                  ),
-                  cursorColor: const Color(0xFF16DB65),
-                  decoration: InputDecoration(
-                    hintText: 'Ketik pertanyaan Anda...',
-                    hintStyle: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: const Color(0xFFA3A3A3),
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFF111111),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF16DB65),
-                        width: 1.5,
-                      ),
-                    ),
-                    disabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
-                    ),
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.send,
+              enabled: !sending && !modelSwitching,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.white,
+              ),
+              cursorColor: const Color(0xFF16DB65),
+              decoration: InputDecoration(
+                hintText: 'Ketik pertanyaan Anda...',
+                hintStyle: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: const Color(0xFFA3A3A3),
+                ),
+                filled: true,
+                fillColor: const Color(0xFF111111),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF16DB65),
+                    width: 1.5,
                   ),
                 ),
+                disabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
+                ),
               ),
+              onSubmitted: (_) {
+                if (!sending && !modelSwitching && controller.text.trim().isNotEmpty) {
+                  onSend();
+                }
+              },
             ),
           ),
         ),

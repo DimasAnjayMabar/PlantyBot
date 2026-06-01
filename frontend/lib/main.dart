@@ -12,7 +12,6 @@ import 'package:frontend/users/register/verify_otp.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
-  
   runApp(const MyApp());
 }
 

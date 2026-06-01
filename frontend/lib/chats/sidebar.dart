@@ -233,7 +233,7 @@ class _SidebarLogo extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Text(
-            'AgriBot',
+            'TandurBot',
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w700,

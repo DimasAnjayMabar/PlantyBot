@@ -707,36 +707,92 @@ class ChatService:
 # KNOWLEDGE SERVICE — PDF Upload & Embedding
 # =============================================================================
 
-def _embed_worker(saved_path: str, jurnal_metadata: dict) -> None:
+def _embed_and_commit(
+    saved_path:      str,
+    jurnal_metadata: dict,
+    file_hash:       str,
+    dest_path,                   # pathlib.Path — untuk hapus file jika duplikat
+    db_factory,                  # callable → SQLAlchemy Session
+    target_func,                 # run_pipeline_with_shared_resources atau _raw
+    log_prefix:      str,
+) -> None:
     """
-    Background thread: jalankan embedder pipeline untuk satu PDF.
+    Background thread: jalankan embedder lalu — hanya jika berhasil —
+    commit hash ke tabel Documents.
 
-    Memakai run_pipeline_with_shared_resources() dari embedder.py sehingga
-    embedding model & koneksi Neo4j/ChromaDB dipinjam dari singleton yang
-    sudah berjalan — tidak ada inisialisasi ulang, zero VRAM overhead.
-
-    Dipanggil oleh KnowledgeService.upload_pdf() setelah file disimpan ke disk.
+    Tiga kemungkinan hasil:
+      1. Sukses (result != None)  → simpan hash ke DB, file tetap di disk.
+      2. Duplikat (result == None, tanpa exception) → file dihapus dari disk,
+         hash TIDAK disimpan (sudah ada di DB dari upload sebelumnya).
+      3. Error transient (exception) → file TETAP di disk agar user bisa retry,
+         hash TIDAK disimpan ke DB. Backend tidak crash.
     """
+    result    = None
+    has_error = False
+
     try:
-        from embedder import run_pipeline_with_shared_resources
-        result = run_pipeline_with_shared_resources(saved_path, jurnal_metadata)
+        result = target_func(saved_path, jurnal_metadata)
         if result:
+            stats = result.get("stats", {})
             logger.info(
-                f"[KnowledgeEmbed] Selesai → file={saved_path}  "
-                f"total_isi_nodes={result['stats']['total_isi_nodes']}"
+                f"[KnowledgeEmbed-{log_prefix}] Selesai → file={saved_path}  stats={stats}"
             )
         else:
-            # run_pipeline mengembalikan None jika file sudah pernah diproses (hash match)
+            # Pipeline mengembalikan None → file duplikat di ChromaDB
             logger.warning(
-                f"[KnowledgeEmbed] Pipeline mengembalikan None "
-                f"(file mungkin sudah pernah diproses) → {saved_path}"
+                f"[KnowledgeEmbed-{log_prefix}] Pipeline mengembalikan None "
+                f"(file mungkin sudah pernah diproses di ChromaDB) → {saved_path}"
             )
     except Exception as exc:
+        has_error = True
         logger.error(
-            f"[KnowledgeEmbed] Error saat embed → file={saved_path}: {exc}",
+            f"[KnowledgeEmbed-{log_prefix}] Error saat embed → file={saved_path}: {exc}",
             exc_info=True,
         )
+        logger.info(
+            f"[KnowledgeEmbed-{log_prefix}] File dipertahankan di disk — "
+            f"user dapat mencoba upload ulang → {saved_path}"
+        )
 
+    if result is not None:
+        # ── Embedding sukses → simpan hash ke DB ──────────────────────────────
+        db = db_factory()
+        try:
+            from models import Documents
+            doc = Documents(hash_value=file_hash)
+            db.add(doc)
+            db.commit()
+            logger.info(
+                f"[KnowledgeEmbed-{log_prefix}] Hash disimpan ke DB → {file_hash[:8]}..."
+            )
+        except Exception as exc:
+            db.rollback()
+            logger.error(
+                f"[KnowledgeEmbed-{log_prefix}] Gagal simpan hash ke DB: {exc}",
+                exc_info=True,
+            )
+        finally:
+            db.close()
+
+    elif not has_error:
+        # ── Duplikat di ChromaDB (bukan error) → hapus file dari disk ─────────
+        # Ini terjadi ketika hash file sama sudah ada di ChromaDB tapi belum
+        # ada di tabel Documents (edge case). File tidak diperlukan lagi.
+        try:
+            dest_path.unlink(missing_ok=True)
+            logger.warning(
+                f"[KnowledgeEmbed-{log_prefix}] File dihapus dari disk karena "
+                f"duplikat di ChromaDB → {saved_path}"
+            )
+        except Exception as exc:
+            logger.error(
+                f"[KnowledgeEmbed-{log_prefix}] Gagal hapus file dari disk: {exc}"
+            )
+    # has_error=True → file sengaja dipertahankan, tidak ada aksi tambahan
+
+
+# service_chats.py - Perbaikan bagian KnowledgeService
+# service_chats.py - Perbaikan method upload_pdf
 
 class KnowledgeService:
     """
@@ -746,12 +802,13 @@ class KnowledgeService:
       1. Controller menerima UploadFile, validasi tipe & ukuran
       2. Controller memanggil KnowledgeService.upload_pdf() dengan bytes mentah
       3. Service menyimpan file ke ./dataset/ (DATASET_DIR)
-      4. Service spawn _embed_worker di daemon thread
+      4. Service spawn _embed_worker di daemon thread (untuk improved mode)
+         atau _embed_worker_raw (untuk raw mode)
       5. Return info file — embedder jalan di background tanpa memblokir response
 
-    Duplikasi konten (file sama, nama beda) ditangani oleh embedder
-    via MD5 hash check di Neo4j — file akan dilewati otomatis.
-    Duplikasi konten (hash sama) ditangani otomatis oleh embedder via MD5 check.
+    embedder_type:
+      - "improved": pipeline lengkap dengan Neo4j + ChromaDB konten_isi
+      - "raw":      pipeline sederhana hanya ChromaDB konten_isi_raw
     """
 
     # Sesuai CONFIG["dataset_path"] di embedder.py
@@ -759,24 +816,27 @@ class KnowledgeService:
 
     @staticmethod
     def upload_pdf(
-        db: Session,
         file_bytes: bytes,
         filename:   str,
+        db: Session,  # ← tambahkan db parameter
         judul:      str | None = None,
         penulis:    str | None = None,
         tahun:      str | None = None,
-        user_id:    int | None = None
+        user_id:    int | None = None,
+        embedder_type: str = "improved",
     ) -> dict:
         """
         Simpan PDF ke ./dataset/ lalu jalankan embedder di background thread.
 
         Parameters:
-          file_bytes  : konten file PDF sebagai bytes (sudah dibaca oleh controller)
-          filename    : nama file asli dari user, e.g. "jurnal_padi.pdf"
-          judul       : judul jurnal/dokumen (opsional, fallback ke nama file)
-          penulis     : nama penulis (opsional, fallback ke "Unknown Author")
-          tahun       : tahun terbit e.g. "2024" (opsional, fallback ke "2024")
-          user_id     : id user yang upload — untuk logging saja, tidak disimpan ke DB
+          file_bytes     : konten file PDF sebagai bytes (sudah dibaca oleh controller)
+          filename       : nama file asli dari user, e.g. "jurnal_padi.pdf"
+          db             : SQLAlchemy Session untuk menyimpan hash file
+          judul          : judul jurnal/dokumen (opsional, fallback ke nama file)
+          penulis        : nama penulis (opsional, fallback ke "Unknown Author")
+          tahun          : tahun terbit e.g. "2024" (opsional, fallback ke "2024")
+          user_id        : id user yang upload — untuk logging saja, tidak disimpan ke DB
+          embedder_type  : "improved" (Neo4j + ChromaDB) atau "raw" (ChromaDB only)
 
         Returns:
           dict berisi info file yang disimpan + status "processing"
@@ -797,8 +857,6 @@ class KnowledgeService:
 
         # ── Tambahkan prefix datetime server ─────────────────────────────────────
         # Format: YYYYMMDD_HHMMSS_<nama_asli>.pdf
-        # Timestamp dari waktu server saat request masuk — unik per detik,
-        # sehingga file dengan nama sama tidak akan pernah collision.
         ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         safe_name = f"{ts}_{clean_original}"
 
@@ -806,8 +864,9 @@ class KnowledgeService:
 
         file_hash = hashlib.md5(file_bytes).hexdigest()
 
-        # Cek duplikat
-        if db.query(Documents).filter(Documents.hash_value == file_hash).first():
+        # ── Cek duplikat di Documents table ───────────────────────────────────
+        existing = db.query(Documents).filter(Documents.hash_value == file_hash).first()
+        if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="File ini sudah pernah diupload sebelumnya.",
@@ -817,24 +876,10 @@ class KnowledgeService:
         dest_path.write_bytes(file_bytes)
         logger.info(
             f"[KnowledgeUpload] File disimpan → {dest_path}  "
-            f"size={len(file_bytes)} bytes  user_id={user_id}"
+            f"size={len(file_bytes)} bytes  user_id={user_id}  mode={embedder_type}"
         )
 
-        # ── Baru simpan hash ke DB setelah file berhasil tersimpan ───────────
-        try:
-            db.add(Documents(hash_value=file_hash))
-            db.commit()
-        except Exception as exc:
-            # Rollback DB dan hapus file yang sudah terlanjur tersimpan
-            db.rollback()
-            dest_path.unlink(missing_ok=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Gagal menyimpan data file.",
-            ) from exc
-
         # ── Susun metadata jurnal ─────────────────────────────────────────────
-        # Nama file asli (tanpa prefix timestamp dan ekstensi) sebagai fallback judul
         stem = Path(clean_original).stem
         jurnal_metadata = {
             "judul":         (judul or stem).strip(),
@@ -843,25 +888,39 @@ class KnowledgeService:
             "tanggal_rilis": (tahun or "2024").strip(),
         }
 
-        # ── Spawn embedder di background ──────────────────────────────────────
+        # ── Pilih target func berdasarkan embedder_type ───────────────────────
+        if embedder_type == "raw":
+            from embedder import run_pipeline_with_shared_resources_raw
+            target_func = run_pipeline_with_shared_resources_raw
+            log_prefix = "RAW"
+        else:
+            from embedder import run_pipeline_with_shared_resources
+            target_func = run_pipeline_with_shared_resources
+            log_prefix = "IMPROVED"
+
+        from database import SessionLocal
+
+        # ── Spawn _embed_and_commit di background ─────────────────────────────
+        # Hash ke DB hanya disimpan SETELAH embedding sukses (di dalam thread).
         t = threading.Thread(
-            target=_embed_worker,
-            args=(str(dest_path), jurnal_metadata),
+            target=_embed_and_commit,
+            args=(str(dest_path), jurnal_metadata, file_hash, dest_path, SessionLocal, target_func, log_prefix),
             daemon=True,
-            name=f"embed-{safe_name}",
+            name=f"embed-{log_prefix.lower()}-{safe_name}",
         )
         t.start()
         logger.info(
-            f"[KnowledgeUpload] Embedder dimulai di background → "
+            f"[KnowledgeUpload] Embedder ({embedder_type}) dimulai di background → "
             f"file={safe_name}  thread={t.name}"
         )
 
         return {
-            "filename":   safe_name,
-            "size_bytes": len(file_bytes),
-            "saved_path": str(dest_path),
-            "judul":      jurnal_metadata["judul"],
-            "penulis":    jurnal_metadata["penulis"],
-            "tahun":      jurnal_metadata["tanggal_rilis"],
-            "status":     "processing",
+            "filename":        safe_name,
+            "size_bytes":      len(file_bytes),
+            "saved_path":      str(dest_path),
+            "judul":           jurnal_metadata["judul"],
+            "penulis":         jurnal_metadata["penulis"],
+            "tahun":           jurnal_metadata["tanggal_rilis"],
+            "status":          "processing",
+            "embedder_type":   embedder_type,
         }

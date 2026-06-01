@@ -630,6 +630,8 @@ class _ChatsPageState extends State<ChatsPage>
           onUploadPdfs: _uploadPdfs,
           onSetModel: (mode, {path}) => _chatService.setModel(mode, path: path),
           onGetModels: () => _chatService.getLocalModels(),
+          onGetRagMode: () => _chatService.getRagMode(),
+          onSetRagMode: (mode) => _chatService.setRagMode(mode),
           pendingDetailId: pendingDetailId,
           onStop: pendingDetailId != null
               ? () => _stopGeneration(pendingDetailId)

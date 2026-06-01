@@ -5,6 +5,8 @@ import torch
 # KONFIGURASI PIPELINE
 # =============================================================================
 
+# config.py - Tambahkan di dalam dictionary CONFIG
+
 CONFIG = {
     # ── Model paths ──────────────────────────────────────────────────────────
     "embedding_model":   "intfloat/multilingual-e5-large",
@@ -28,6 +30,7 @@ CONFIG = {
     # ── ChromaDB — collection utama + collection memory + collection identity ─
     "chroma_path":       os.path.join(os.path.dirname(os.path.abspath(__file__)), "chroma_db"),
     "chroma_collection": "konten_isi",
+    "raw_collection":    "konten_isi_raw",
     "memory_collection": "chat_memory",
     "identity_collection": "user_identity",
 
@@ -59,6 +62,15 @@ CONFIG = {
     "memory_summary_model":      "openai/gpt-oss-120b",
     "memory_summary_max_tokens": 512,
     "memory_recent_window":      5,
+
+    "rag_mode": "improved",
+    "regular_retrieval_k": 6,      # jumlah chunk yang diambil dari ChromaDB
+    "regular_reranked_k": 3,       # jumlah chunk setelah reranking
+
+    # ── EMBEDDER CONFIGURATION (PDF ingestion) ────────────────────────────────
+    "max_tokens_per_chunk": 512,      # maks token per chunk saat splitting
+    "dataset_path": "./dataset",      # folder penyimpanan PDF upload
+    "subheading_score_threshold": 4,  # threshold deteksi sub-judul
 }
 
 def _apply_device_config():

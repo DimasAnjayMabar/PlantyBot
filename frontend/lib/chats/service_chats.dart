@@ -408,6 +408,68 @@ class ChatService {
   }
 
   // -------------------------------------------------------------------------
+  // RAG Mode Management
+  // -------------------------------------------------------------------------
+
+  /// Mendapatkan mode RAG yang sedang aktif dari backend
+  Future<String> getRagMode() async {
+    try {
+      final res = await _dio.get(
+        '/rag/mode',
+        options: Options(headers: _authHeader),
+      );
+      if (res.data['success'] == true) {
+        final mode = res.data['data']['mode'] as String;
+        return mode;
+      }
+      return 'improved';
+    } catch (e) {
+      print('❌ Error getting RAG mode: $e');
+      return 'improved';
+    }
+  }
+
+  /// Mengganti mode RAG
+  Future<bool> setRagMode(String mode) async {
+    try {
+      final res = await _dio.post(
+        '/rag/set-mode',
+        data: {'mode': mode},
+        options: Options(headers: _authHeader),
+      );
+      if (res.data['success'] == true) {
+        // Gunakan RAGPreferenceStorage dari token_storage.dart
+        await RAGPreferenceStorage.saveRagMode(mode);
+        print('✅ RAG mode changed to: $mode');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('❌ Set RAG mode failed: $e');
+      return false;
+    }
+  }
+
+  /// Initialize RAG mode preference (panggil setelah login)
+  Future<void> initRagMode() async {
+    try {
+      // Coba ambil dari storage dulu menggunakan RAGPreferenceStorage
+      String? savedMode = await RAGPreferenceStorage.getSavedRagMode();
+      
+      if (savedMode != null) {
+        // Sync ke backend
+        await setRagMode(savedMode);
+      } else {
+        // Ambil dari backend
+        final currentMode = await getRagMode();
+        await RAGPreferenceStorage.saveRagMode(currentMode);
+      }
+    } catch (e) {
+      print('⚠️ Error initializing RAG mode: $e');
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Auth Methods
   // -------------------------------------------------------------------------
 
@@ -764,6 +826,7 @@ class ChatService {
           if (f.judul != null && f.judul!.isNotEmpty) 'judul': f.judul,
           if (f.penulis != null && f.penulis!.isNotEmpty) 'penulis': f.penulis,
           if (f.tahun != null && f.tahun!.isNotEmpty) 'tahun': f.tahun,
+          'embedder_type': f.embedderType,
         });
 
         final res = await _dio.post(
@@ -877,6 +940,8 @@ class PdfUploadFile {
   final String? judul;
   final String? penulis;
   final String? tahun;
+  /// 'improved' (default) atau 'raw'
+  final String embedderType;
 
   const PdfUploadFile({
     required this.bytes,
@@ -884,5 +949,6 @@ class PdfUploadFile {
     this.judul,
     this.penulis,
     this.tahun,
+    this.embedderType = 'improved',
   });
 }

@@ -21,37 +21,32 @@ import pdfplumber
 import chromadb
 from neo4j import GraphDatabase
 
+# Import config dari config.py
+from config import CONFIG
+
 # RAGModels singleton — embedding model dipinjam dari pipeline yang sudah berjalan,
 # tidak ada inisialisasi model baru di sini.
 from pipeline import RAGModels
 
 logger = logging.getLogger(__name__)
 
-############################################################
-# CONFIGURATION
-############################################################
+# =============================================================================
+# CONSTANTS (ambil dari CONFIG)
+# =============================================================================
 
-CONFIG = {
-    # embedding_model tidak diinisialisasi di sini —
-    # dipinjam dari RAGModels singleton via pipeline.py
-    "max_tokens_per_chunk": 512,
+MAX_TOKENS_PER_CHUNK = CONFIG.get("max_tokens_per_chunk", 512)
+CHROMA_PATH = CONFIG["chroma_path"]
+CHROMA_COLLECTION = CONFIG["chroma_collection"]
+RAW_COLLECTION = CONFIG["raw_collection"]
+NEO4J_URI = CONFIG["neo4j_uri"]
+NEO4J_USER = CONFIG["neo4j_user"]
+NEO4J_PASSWORD = CONFIG["neo4j_password"]
+DATASET_PATH = CONFIG.get("dataset_path", "./dataset")
+SUBHEADING_SCORE_THRESHOLD = CONFIG.get("subheading_score_threshold", 4)
 
-    # ChromaDB
-    "chroma_path": "./chroma_db",
-    "chroma_collection": "konten_isi",
-
-    # Neo4j
-    "neo4j_uri": "neo4j://127.0.0.1:7687",
-    "neo4j_user": "neo4j",
-    "neo4j_password": "password",
-
-    # Dataset
-    "dataset_path": "./dataset",
-}
-
-############################################################
+# =============================================================================
 # DATA STRUCTURES
-############################################################
+# =============================================================================
 
 @dataclass
 class JurnalNode:
@@ -73,9 +68,9 @@ class IsiNode:
     konten_chunk: str           # teks chunk (juga di-embed ke ChromaDB)
     halaman: int                # halaman awal chunk
 
-############################################################
+# =============================================================================
 # FILE HASHING (MD5) UNTUK DETEKSI DUPLIKASI
-############################################################
+# =============================================================================
 
 def calculate_file_hash(file_path: str) -> str:
     """
@@ -101,9 +96,9 @@ def is_file_processed(neo4j_driver, file_hash: str) -> bool:
         result = session.run(query, file_hash=file_hash).single()
         return result["exists"] if result else False
 
-############################################################
+# =============================================================================
 # STEP 1 — PDF INGESTION (2-COLUMN AWARE)
-############################################################
+# =============================================================================
 
 def _detect_column_split(words: List[Dict], page_width: float) -> Optional[float]:
     """
@@ -225,9 +220,9 @@ def _build_line_dict(words: List[Dict], page_num: int,
         'page_height': page_height,   # diperlukan untuk scoring subheading
     }
 
-############################################################
+# =============================================================================
 # STEP 2 — REMOVE BOILERPLATE
-############################################################
+# =============================================================================
 
 BOILERPLATE_PATTERNS = [
     r"Prosiding SEMNAS BIO",
@@ -253,12 +248,12 @@ def is_boilerplate(text: str) -> bool:
 def clean_lines(lines: List[Dict]) -> List[Dict]:
     return [l for l in lines if not is_boilerplate(l["text"])]
 
-############################################################
+# =============================================================================
 # STEP 3 — HEADING DETECTION (HEURISTIC SCORING)
-############################################################
+# =============================================================================
 
 # Threshold skor minimum untuk dianggap sub-judul
-SUBHEADING_SCORE_THRESHOLD = 4
+SUBHEADING_SCORE_THRESHOLD = CONFIG.get("subheading_score_threshold", 4)
 
 def is_all_caps(text: str) -> bool:
     """Cek apakah teks dominan UPPERCASE (>80% huruf kapital)."""
@@ -373,9 +368,9 @@ def is_subheading(line: Dict,
     score = score_subheading(line, prev_line, dominant_font_size, normal_line_gap)
     return score >= SUBHEADING_SCORE_THRESHOLD
 
-############################################################
+# =============================================================================
 # STEP 4 — TOKEN COUNTING & CHUNKING
-############################################################
+# =============================================================================
 
 def count_tokens(text: str) -> int:
     return len(text) // 4
@@ -416,9 +411,9 @@ def split_text_word_safe(text: str, max_tokens: int) -> List[str]:
 
     return chunks
 
-############################################################
+# =============================================================================
 # STEP 5 — BUILD ISI NODES (DENGAN GLOBAL CHUNK COUNTER)
-############################################################
+# =============================================================================
 
 def deterministic_id(jurnal_id: str, sub_judul: str, chunk_index: int) -> str:
     """
@@ -464,7 +459,7 @@ def build_isi_nodes(lines: List[Dict], jurnal_id: str) -> List[IsiNode]:
         if not current_buffer:
             return
         full_text = " ".join(l["text"] for l in current_buffer)
-        chunks = split_text_word_safe(full_text, CONFIG["max_tokens_per_chunk"])
+        chunks = split_text_word_safe(full_text, MAX_TOKENS_PER_CHUNK)
         for chunk in chunks:
             node_id = deterministic_id(jurnal_id, current_heading, global_chunk_counter)
             isi_nodes.append(IsiNode(
@@ -490,16 +485,13 @@ def build_isi_nodes(lines: List[Dict], jurnal_id: str) -> List[IsiNode]:
     flush_buffer()
     return isi_nodes
 
-############################################################
+# =============================================================================
 # EMBEDDING — dipinjam dari RAGModels singleton
-# Tidak ada class EmbeddingModel di sini. Semua pemanggilan
-# .encode() dilakukan via RAGModels.embed_batch_safe() yang
-# sudah thread-safe dan berbagi GPU dengan RAG pipeline.
-############################################################
+# =============================================================================
 
-############################################################
+# =============================================================================
 # NEO4J INGESTOR
-############################################################
+# =============================================================================
 
 class Neo4jIngestor:
     """
@@ -511,9 +503,9 @@ class Neo4jIngestor:
     """
 
     def __init__(self,
-                 uri: str = CONFIG["neo4j_uri"],
-                 user: str = CONFIG["neo4j_user"],
-                 password: str = CONFIG["neo4j_password"]):
+                 uri: str = NEO4J_URI,
+                 user: str = NEO4J_USER,
+                 password: str = NEO4J_PASSWORD):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
         print(f"Neo4j connected: {uri}")
 
@@ -602,9 +594,9 @@ class Neo4jIngestor:
 
         print(f"  ✓ Neo4j: {len(isi_nodes)} Isi nodes ingested with HAS_SECTION & NEXT edges")
 
-############################################################
+# =============================================================================
 # CHROMADB INGESTOR
-############################################################
+# =============================================================================
 
 class ChromaIngestor:
     """
@@ -614,10 +606,10 @@ class ChromaIngestor:
     Metadata  : {isi_id, jurnal_id}
     """
 
-    def __init__(self, persist_directory: str = CONFIG["chroma_path"]):
+    def __init__(self, persist_directory: str = CHROMA_PATH):
         self.client = chromadb.PersistentClient(path=persist_directory)
         self.collection = self.client.get_or_create_collection(
-            name=CONFIG["chroma_collection"],
+            name=CHROMA_COLLECTION,
             metadata={"description": "Embeddings konten_chunk dari Node Isi"}
         )
         print(f"ChromaDB initialized at: {persist_directory}")
@@ -660,12 +652,99 @@ class ChromaIngestor:
         )
         logger.info(
             "ChromaDB: %d konten_chunk ingested ke '%s' (contextualized embedding)",
-            len(isi_nodes), CONFIG["chroma_collection"],
+            len(isi_nodes), CHROMA_COLLECTION,
         )
 
-############################################################
+# =============================================================================
+# CHROMADB INGESTOR — RAW (tanpa heading detection & Neo4j)
+# =============================================================================
+
+def is_file_processed_raw(chroma_client, file_hash: str) -> bool:
+    """
+    Cek apakah file dengan hash tertentu sudah ada di collection konten_isi_raw.
+    Dipakai sebagai pengganti cek Neo4j untuk pipeline raw.
+    """
+    try:
+        col = chroma_client.get_or_create_collection(RAW_COLLECTION)
+        results = col.get(where={"file_hash": file_hash}, limit=1, include=[])
+        return len(results["ids"]) > 0
+    except Exception:
+        return False
+
+
+class ChromaIngestorRaw:
+    """
+    Manages ChromaDB vector ingestion untuk mode RAW.
+
+    Pipeline raw TIDAK menggunakan Neo4j dan TIDAK melakukan heading detection.
+    Alur: PDF → 2-column detection → boilerplate removal → flat chunking
+          → embed teks mentah → konten_isi_raw
+
+    Collection : konten_isi_raw  (terpisah dari konten_isi improved)
+    Embedding  : teks chunk murni — TANPA prefix judul/sub_judul
+    Metadata   : {file_hash, jurnal_id, chunk_index, source_file}
+    Duplikasi  : dicek via metadata file_hash di ChromaDB (tanpa Neo4j)
+    """
+
+    def __init__(self, persist_directory: str = CHROMA_PATH, chroma_client=None):
+        # Jika client sudah ada (dipinjam dari pipeline singleton), pakai langsung.
+        # Jika tidak (misal dijalankan standalone via CLI), buat baru dari persist_directory.
+        if chroma_client is not None:
+            self.client = chroma_client
+            print(f"ChromaDB (raw) memakai shared client  collection='{RAW_COLLECTION}'")
+        else:
+            self.client = chromadb.PersistentClient(path=persist_directory)
+            print(f"ChromaDB (raw) initialized at: {persist_directory}  "
+                  f"collection='{RAW_COLLECTION}'")
+        self.collection = self.client.get_or_create_collection(
+            name=RAW_COLLECTION,
+            metadata={"description": "Embeddings raw — flat chunks tanpa heading/Neo4j"}
+        )
+
+    def ingest_chunks(self,
+                      chunks: List[str],
+                      file_hash: str,
+                      jurnal_id: str,
+                      source_file: str,
+                      rag_models: RAGModels):
+        """
+        Ingest flat list of text chunks ke ChromaDB collection raw.
+
+        ID  : deterministik dari jurnal_id + index → tidak ada duplikat per file
+        Embed: teks chunk murni (tanpa prefix konteks)
+        """
+        if not chunks:
+            return
+
+        ids = [
+            str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{jurnal_id}:raw:{i}"))
+            for i in range(len(chunks))
+        ]
+        embeddings = rag_models.embed_batch_safe(chunks)
+        metadatas  = [
+            {
+                "file_hash":   file_hash,
+                "jurnal_id":   jurnal_id,
+                "chunk_index": i,
+                "source_file": source_file,
+            }
+            for i in range(len(chunks))
+        ]
+
+        self.collection.add(
+            ids=ids,
+            documents=chunks,
+            embeddings=embeddings,
+            metadatas=metadatas,
+        )
+        logger.info(
+            "ChromaDB (raw): %d chunks ingested ke '%s'",
+            len(chunks), RAW_COLLECTION,
+        )
+
+# =============================================================================
 # PIPELINE
-############################################################
+# =============================================================================
 
 def run_pipeline(pdf_path: str,
                  jurnal_metadata: Dict,
@@ -755,7 +834,7 @@ def run_pipeline_with_shared_resources(
     jurnal_metadata: Dict,
 ) -> Optional[Dict]:
     """
-    Entry point untuk service backend saat upload PDF via API.
+    Entry point untuk service backend saat upload PDF via API (mode IMPROVED).
 
     Meminjam semua resource dari singleton yang sudah berjalan:
       - RAGModels  → embedding model (shared, thread-safe via lock)
@@ -772,46 +851,133 @@ def run_pipeline_with_shared_resources(
     pipeline   = get_rag_pipeline()
     rag_models = pipeline.models  # RAGModels singleton
 
-    # Neo4jIngestor membuat koneksi baru menggunakan CONFIG — URI tidak
-    # diambil dari internal driver pipeline karena struktur internal Neo4j
-    # driver berubah antar versi dan tidak stabil sebagai public API.
-    # ChromaIngestor membungkus client yang sudah ada.
     neo4j = Neo4jIngestor(
-        uri      = CONFIG["neo4j_uri"],
-        user     = CONFIG["neo4j_user"],
-        password = CONFIG["neo4j_password"],
+        uri      = NEO4J_URI,
+        user     = NEO4J_USER,
+        password = NEO4J_PASSWORD,
     )
-    chroma = ChromaIngestor(persist_directory=CONFIG["chroma_path"])
+    chroma = ChromaIngestor(persist_directory=CHROMA_PATH)
 
     try:
         return run_pipeline(pdf_path, jurnal_metadata, rag_models, neo4j, chroma)
     finally:
-        # Jangan close neo4j.driver di sini — itu koneksi baru yang dibuat Neo4jIngestor,
-        # bukan driver milik pipeline. Tapi kita tetap close agar tidak leak.
         neo4j.close()
 
-############################################################
+
+def run_pipeline_raw(pdf_path: str,
+                     jurnal_metadata: Dict,
+                     rag_models: RAGModels,
+                     chroma_raw: ChromaIngestorRaw) -> Optional[Dict]:
+    """
+    Pipeline RAW: PDF → 2-column detection → boilerplate removal
+                  → flat chunking → embed → konten_isi_raw
+
+    TIDAK menggunakan Neo4j dan TIDAK melakukan heading detection.
+    Duplikasi dicek via metadata file_hash di ChromaDB.
+
+    Returns:
+        Dict hasil jika file baru diproses
+        None jika file sudah ada (duplikat berdasarkan MD5 hash)
+    """
+    logger.info("[RAW] Processing: %s", pdf_path)
+
+    # ── Cek duplikasi via ChromaDB (tanpa Neo4j) ──────────────────────────
+    file_hash = calculate_file_hash(pdf_path)
+    logger.info("[RAW] File hash (MD5): %s", file_hash)
+
+    if is_file_processed_raw(chroma_raw.client, file_hash):
+        logger.warning(
+            "[RAW] File sudah pernah diproses (hash: %s...). Melewati...", file_hash[:8]
+        )
+        return None
+
+    # ── Step 1: Parse PDF dengan 2-column detection ───────────────────────
+    logger.info("[RAW] Step 1: Parsing PDF (2-column aware)...")
+    lines = parse_pdf_to_lines(pdf_path)
+    logger.info("[RAW]   Extracted %d lines", len(lines))
+
+    # ── Step 2: Hapus boilerplate ─────────────────────────────────────────
+    logger.info("[RAW] Step 2: Removing boilerplate...")
+    lines = clean_lines(lines)
+    logger.info("[RAW]   Retained %d lines after cleaning", len(lines))
+
+    if not lines:
+        logger.warning("[RAW] Tidak ada konten setelah cleaning — pipeline berhenti.")
+        return None
+
+    # ── Step 3: Flat chunking — gabung semua teks, lalu potong per N token ─
+    # Tidak ada heading detection; seluruh teks diperlakukan sebagai satu alur.
+    logger.info("[RAW] Step 3: Flat chunking...")
+    full_text = " ".join(l["text"] for l in lines)
+    chunks    = split_text_word_safe(full_text, MAX_TOKENS_PER_CHUNK)
+    logger.info("[RAW]   Created %d flat chunks", len(chunks))
+
+    # ── Step 4: Embed & ingest ke ChromaDB raw ────────────────────────────
+    jurnal_id = str(uuid.uuid4())
+    logger.info("[RAW] Step 4: Ingesting to ChromaDB RAW...")
+    chroma_raw.ingest_chunks(
+        chunks      = chunks,
+        file_hash   = file_hash,
+        jurnal_id   = jurnal_id,
+        source_file = pdf_path,
+        rag_models  = rag_models,
+    )
+
+    return {
+        "jurnal_id":   jurnal_id,
+        "source_file": pdf_path,
+        "stats": {
+            "total_lines":  len(lines),
+            "total_chunks": len(chunks),
+        },
+    }
+
+
+def run_pipeline_with_shared_resources_raw(
+    pdf_path: str,
+    jurnal_metadata: Dict,
+) -> Optional[Dict]:
+    """
+    Entry point untuk service backend saat upload PDF via API (mode RAW).
+
+    Tidak membuat koneksi Neo4j — hanya ChromaDB.
+    Collection: konten_isi_raw
+    """
+    from pipeline import get_rag_pipeline
+
+    pipeline   = get_rag_pipeline()
+    rag_models = pipeline.models  # RAGModels singleton
+
+    # Pinjam client ChromaDB dari singleton pipeline — jangan buat instance baru
+    # agar tidak konflik "An instance of Chroma already exists with different settings"
+    chroma_raw = ChromaIngestorRaw(chroma_client=pipeline.chroma.client)
+    return run_pipeline_raw(pdf_path, jurnal_metadata, rag_models, chroma_raw)
+
+
+# =============================================================================
 # MAIN
-############################################################
+# =============================================================================
 
 def main():
+    global MAX_TOKENS_PER_CHUNK  # harus di baris pertama sebelum assignment apapun
     import argparse
 
     parser = argparse.ArgumentParser(
         description="Disease Journal PDF Embedder — Neo4j + ChromaDB"
     )
-    parser.add_argument("--dataset", default=CONFIG["dataset_path"])
-    parser.add_argument("--chroma", default=CONFIG["chroma_path"])
-    parser.add_argument("--neo4j-uri", default=CONFIG["neo4j_uri"])
-    parser.add_argument("--neo4j-user", default=CONFIG["neo4j_user"])
-    parser.add_argument("--neo4j-password", default=CONFIG["neo4j_password"])
+    parser.add_argument("--dataset", default=DATASET_PATH)
+    parser.add_argument("--chroma", default=CHROMA_PATH)
+    parser.add_argument("--neo4j-uri", default=NEO4J_URI)
+    parser.add_argument("--neo4j-user", default=NEO4J_USER)
+    parser.add_argument("--neo4j-password", default=NEO4J_PASSWORD)
     parser.add_argument("--file", help="Process single PDF instead of entire dataset")
-    parser.add_argument("--max-tokens", type=int, default=CONFIG["max_tokens_per_chunk"])
+    parser.add_argument("--max-tokens", type=int, default=MAX_TOKENS_PER_CHUNK)
     parser.add_argument("--force", action="store_true",
                        help="Force reprocess even if file already exists (ignore hash check)")
     args = parser.parse_args()
 
-    CONFIG["max_tokens_per_chunk"] = args.max_tokens
+    # Override MAX_TOKENS_PER_CHUNK jika di CLI
+    MAX_TOKENS_PER_CHUNK = args.max_tokens
 
     # Saat dijalankan via CLI (standalone), RAGModels diinisialisasi di sini.
     # Saat dipanggil oleh service backend, gunakan run_pipeline_with_shared_resources()
@@ -909,7 +1075,7 @@ def main():
     total_nodes = sum(r["stats"]["total_isi_nodes"] for r in all_results)
     print(f"Total Isi nodes : {total_nodes}")
     print(f"\nNeo4j   : {args.neo4j_uri}")
-    print(f"ChromaDB: {args.chroma}  |  collection: {CONFIG['chroma_collection']}")
+    print(f"ChromaDB: {args.chroma}  |  collection: {CHROMA_COLLECTION}")
     print("\nGraph structure:")
     print("  (Jurnal)-[:HAS_SECTION]->(Isi)")
     print("  (Isi)-[:NEXT]->(Isi)")

@@ -682,9 +682,17 @@ class RAGPipeline:
         intent = self._detect_query_intent(query)
         log.info("Intent terdeteksi: %s — query=%r", intent, query[:80])
 
+        rag_mode = CONFIG.get("rag_mode", "improved")
+
         if intent == "social":
             return self.process_social_query(query, chat_id=chat_id, stop_event=stop_event, user_id=user_id)
+        
+        if rag_mode == "regular":
+            log.info("[Router] Menggunakan Regular RAG pipeline")
+            return self.process_regular_query(query, chat_id=chat_id, stop_event=stop_event, user_id=user_id)
+    
         return self.process_knowledge_query(query, chat_id=chat_id, stop_event=stop_event, user_id=user_id)
+    
 
     # ── Memory System ─────────────────────────────────────────────────────────
 
@@ -1341,6 +1349,132 @@ class RAGPipeline:
             intent="knowledge",
         )
 
+    def process_regular_query(
+        self,
+        query:      str,
+        chat_id:    int | None = None,
+        stop_event: threading.Event = None,
+        user_id:    int | None = None,
+    ) -> RAGResponse:
+        """
+        Regular RAG Pipeline:
+        Tahap 1: ChromaDB similarity search di raw collection
+        Tahap 2: BGE reranking
+        Tahap 3: Memory inject (opsional)
+        Tahap 4: LLM generation
+        
+        Perbedaan dengan Improved RAG:
+        - Tidak ada Neo4j context enrichment
+        - Tidak ada window prev/next chunks
+        - Tidak ada max_chunks_per_jurnal filtering
+        - Retrieval langsung dari raw_chunk tanpa metadata jurnal kompleks
+        """
+        t_start = time.perf_counter()
+        log.info("═" * 60)
+        log.info("[RegularRAG] Query: %r  chat_id=%s", query[:120], chat_id)
+
+        # ── Deteksi bahasa & NLP keyword enrichment ───────────────────────────
+        lang = self._detect_language(query)
+        nlp_keywords = self.models.extract_keywords_nlp(query, lang)
+        enriched_query = f"{query} {nlp_keywords}".strip() if nlp_keywords else query
+
+        # ══════════════════════════════════════════════════════════════════════
+        # TAHAP 1 — ChromaDB Retrieval (RAW COLLECTION)
+        # ══════════════════════════════════════════════════════════════════════
+        k = CONFIG.get("regular_retrieval_k", 6)
+        log.info("[RegularRAG Tahap 1] ChromaDB retrieval (k=%d) dari raw_collection...", k)
+        t1 = time.perf_counter()
+
+        query_emb = self.models.get_embedding(enriched_query)
+        
+        # Gunakan raw collection, bukan konten_isi
+        raw_collection = self.chroma.client.get_collection(CONFIG["raw_collection"])
+        results = raw_collection.query(
+            query_embeddings=[query_emb],
+            n_results=k,
+            include=["documents", "metadatas", "distances"],
+        )
+
+        raw_chunks = []
+        if results["ids"] and results["ids"][0]:
+            for i, doc_id in enumerate(results["ids"][0]):
+                meta = results["metadatas"][0][i] if results["metadatas"] else {}
+                dist = results["distances"][0][i] if results["distances"] else 1.0
+                raw_chunks.append({
+                    "id": doc_id,
+                    "text": results["documents"][0][i],
+                    "metadata": meta,
+                    "vector_score": dist,
+                })
+
+        log.info("[RegularRAG Tahap 1] %d chunk ditemukan (%.3fs)", len(raw_chunks), time.perf_counter() - t1)
+
+        if not raw_chunks:
+            return RAGResponse(
+                answer="Maaf, tidak menemukan informasi relevan di database.",
+                sources=[], final_chunks=[], processing_time=time.perf_counter() - t_start, intent="knowledge",
+            )
+
+        # ══════════════════════════════════════════════════════════════════════
+        # TAHAP 2 — Reranking (BGE Cross-Encoder)
+        # ══════════════════════════════════════════════════════════════════════
+        reranked_k = CONFIG.get("regular_reranked_k", 3)
+        log.info("[RegularRAG Tahap 2] BGE reranking (%d → top %d)...", len(raw_chunks), reranked_k)
+        t2 = time.perf_counter()
+
+        chunk_texts = [c["text"] for c in raw_chunks]
+        scores = self.models.rerank(query, chunk_texts)
+
+        for i, score in enumerate(scores):
+            raw_chunks[i]["rerank_score"] = float(score)
+
+        raw_chunks.sort(key=lambda x: x["rerank_score"], reverse=True)
+        top_chunks = raw_chunks[:reranked_k]
+
+        log.info("[RegularRAG Tahap 2] Top %d dipilih (%.3fs)", len(top_chunks), time.perf_counter() - t2)
+
+        # ══════════════════════════════════════════════════════════════════════
+        # TAHAP 3 — Memory Inject
+        # ══════════════════════════════════════════════════════════════════════
+        memory_text: str | None = None
+        if chat_id is not None:
+            memory_text = self.get_memory(chat_id, query, user_id=user_id)
+
+        # ══════════════════════════════════════════════════════════════════════
+        # TAHAP 4 — LLM Generation
+        # ══════════════════════════════════════════════════════════════════════
+        messages = self._build_regular_messages(query, top_chunks, lang=lang, memory=memory_text)
+        answer_gen = self._generate_stream(
+            messages,
+            stop_event=stop_event,
+            temperature=CONFIG["temperature"],
+            top_p=CONFIG["top_p"],
+            max_new_tokens=CONFIG["max_new_tokens"],
+        )
+
+        # ── Sumber referensi untuk UI ─────────────────────────────────────────
+        sources = [
+            {
+                "chunk_text": c["text"][:300] + ("…" if len(c["text"]) > 300 else ""),
+                "rerank_score": f"{c.get('rerank_score', 0):.4f}",
+                "vector_score": f"{c['vector_score']:.4f}",
+                "metadata": c.get("metadata", {}),
+            }
+            for c in top_chunks
+        ]
+
+        elapsed = time.perf_counter() - t_start
+        log.info("[RegularRAG] Pipeline selesai — %.3fs  |  chunks=%d", elapsed, len(top_chunks))
+        log.info("═" * 60)
+
+        return RAGResponse(
+            answer=answer_gen,
+            sources=sources,
+            final_chunks=[],
+            processing_time=elapsed,
+            intent="knowledge",
+        )
+    
     # ── Internal helpers ──────────────────────────────────────────────────────
 
     @staticmethod
@@ -1589,6 +1723,83 @@ class RAGPipeline:
         return [
             {"role": "system", "content": system_content},
             {"role": "user",   "content": f"{question_label}: {query}"},
+        ]
+
+    def _build_regular_messages(
+        self,
+        query:      str,
+        chunks:     List[Dict],
+        lang:       str = None,
+        memory:     str | None = None,
+    ) -> List[Dict]:
+        """
+        Build messages untuk Regular RAG (tanpa metadata jurnal kompleks).
+        """
+        lang = lang if lang is not None else self._detect_language(query)
+        tier = self._get_model_tier()
+
+        # Batasi context length
+        safe_budget = GROQ_MODEL_SAFE_TOKEN_BUDGET.get(CONFIG["groq_model"], 4_800)
+        _usable = safe_budget - FIXED_OVERHEAD_TOKENS
+        max_chars = min(int(_usable * 0.30 * 4), CONFIG["context_max_chars"])
+        
+        if tier == "small":
+            max_chars = min(max_chars, 3_000)
+        elif tier == "medium":
+            max_chars = min(max_chars, 6_000)
+
+        context_parts = []
+        used_chars = 0
+
+        for i, chunk in enumerate(chunks, 1):
+            part = f"[{i}] {chunk['text']}"
+            if used_chars + len(part) > max_chars:
+                remaining = max_chars - used_chars
+                if remaining > 200:
+                    context_parts.append(part[:remaining] + "…")
+                break
+            context_parts.append(part)
+            used_chars += len(part)
+
+        context_str = "\n\n".join(context_parts)
+        source_str = "\n".join([f"[{i}] Chunk {i}" for i in range(1, len(chunks) + 1)])
+
+        if lang == "id":
+            memory_section = (
+                PROMPTS["knowledge_memory_block_id"].format(memory=memory)
+                if memory else ""
+            )
+            prompt_key = {
+                "small": "knowledge_system_id_local",
+                "medium": "knowledge_system_id_local",
+                "large": "knowledge_system_id",
+            }[tier]
+            system_content = PROMPTS[prompt_key].format(
+                memory_section=memory_section,
+                context_str=context_str,
+                source_str=source_str,
+            )
+            question_label = "Pertanyaan"
+        else:
+            memory_section = (
+                PROMPTS["knowledge_memory_block_en"].format(memory=memory)
+                if memory else ""
+            )
+            prompt_key = {
+                "small": "knowledge_system_en_local",
+                "medium": "knowledge_system_en_local",
+                "large": "knowledge_system_en",
+            }[tier]
+            system_content = PROMPTS[prompt_key].format(
+                memory_section=memory_section,
+                context_str=context_str,
+                source_str=source_str,
+            )
+            question_label = "Question"
+
+        return [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": f"{question_label}: {query}"},
         ]
 
     def _generate_stream(

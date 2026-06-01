@@ -1,0 +1,966 @@
+2026-06-01 13:35:02  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-06-01 13:35:02  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-06-01 13:35:02  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-06-01 13:35:02  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-06-01 13:35:02  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-06-01 13:35:13  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (11.27s)
+2026-06-01 13:35:13  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-06-01 13:35:20  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (6.21s)
+2026-06-01 13:35:20  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-06-01 13:35:20  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-06-01 13:35:20  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-06-01 13:35:26  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (6.20s)
+2026-06-01 13:35:26  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-06-01 13:35:26  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-06-01 13:35:37  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-06-01 13:35:37  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-06-01 13:35:37  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-06-01 13:41:48  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-06-01 13:41:48  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-06-01 13:41:48  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-06-01 13:41:48  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-06-01 13:41:48  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-06-01 13:41:57  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (9.05s)
+2026-06-01 13:41:57  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-06-01 13:42:03  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (6.13s)
+2026-06-01 13:42:03  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-06-01 13:42:04  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-06-01 13:42:04  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-06-01 13:42:09  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (5.59s)
+2026-06-01 13:42:09  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-06-01 13:42:09  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-06-01 13:42:13  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-06-01 13:42:13  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-06-01 13:42:13  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-06-01 13:42:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:42:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:42:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:42:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:42:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:42:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:42:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:42:23  [31mERROR   [0m  [38;5;245magribot[0m  Neo4j enrichment gagal (5 isi_id)
+  | ExceptionGroup: All routing table requests failed (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_async_compat\network\_bolt_socket.py", line 512, in _connect_secure
+    |     s.connect(resolved_address)
+    | ConnectionRefusedError: [WinError 10061] No connection could be made because the target machine actively refused it
+    | 
+    | The above exception was the direct cause of the following exception:
+    | 
+    | Traceback (most recent call last):
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\io\_bolt_socket.py", line 329, in connect
+    |     s = cls._connect_secure(
+    |         ^^^^^^^^^^^^^^^^^^^^
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_async_compat\network\_bolt_socket.py", line 523, in _connect_secure
+    |     raise ServiceUnavailable(
+    | neo4j.exceptions.ServiceUnavailable: Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [WinError 10061] No connection could be made because the target machine actively refused it)
+    | 
+    | The above exception was the direct cause of the following exception:
+    | 
+    | Traceback (most recent call last):
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\io\_pool.py", line 833, in fetch_routing_table
+    |     new_routing_info = self.fetch_routing_info(
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\io\_pool.py", line 792, in fetch_routing_info
+    |     cx = self._acquire(address, auth, deadline, None)
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\io\_pool.py", line 418, in _acquire
+    |     return connection_creator()
+    |            ^^^^^^^^^^^^^^^^^^^^
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\io\_pool.py", line 231, in connection_creator
+    |     connection = self.opener(
+    |                  ^^^^^^^^^^^^
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\io\_pool.py", line 711, in opener
+    |     return Bolt.open(
+    |            ^^^^^^^^^^
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\io\_bolt.py", line 368, in open
+    |     s, protocol_version = BoltSocket.connect(
+    |                           ^^^^^^^^^^^^^^^^^^^
+    |   File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\io\_bolt_socket.py", line 380, in connect
+    |     raise ServiceUnavailable(
+    | neo4j.exceptions.ServiceUnavailable: Couldn't connect to 127.0.0.1:7687 (resolved to ('127.0.0.1:7687',)):
+    | Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [WinError 10061] No connection could be made because the target machine actively refused it)
+    +------------------------------------
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "F:\proyek magang\chatbot3\pipeline.py", line 577, in enrich
+    for rec in session.run(cypher, isi_ids=isi_ids):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\work\session.py", line 305, in run
+    self._connect(self._config.default_access_mode)
+  File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\work\session.py", line 126, in _connect
+    super()._connect(
+  File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\work\workspace.py", line 166, in _connect
+    target_db = self._get_routing_target_database(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\work\workspace.py", line 244, in _get_routing_target_database
+    self._pool.update_routing_table(
+  File "F:\proyek magang\chatbot3\venv\Lib\site-packages\neo4j\_sync\io\_pool.py", line 1076, in update_routing_table
+    raise ServiceUnavailable(
+neo4j.exceptions.ServiceUnavailable: Unable to retrieve routing information
+2026-06-01 13:42:23  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 0/5 berhasil diperkaya
+2026-06-01 13:45:06  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-06-01 13:45:06  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-06-01 13:45:06  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-06-01 13:45:06  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-06-01 13:45:06  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-06-01 13:45:16  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (9.37s)
+2026-06-01 13:45:16  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-06-01 13:45:22  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (6.31s)
+2026-06-01 13:45:22  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-06-01 13:45:22  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-06-01 13:45:22  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-06-01 13:45:28  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (5.38s)
+2026-06-01 13:45:28  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-06-01 13:45:28  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-06-01 13:45:32  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-06-01 13:45:32  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-06-01 13:45:32  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-06-01 13:45:39  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:45:39  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:45:39  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:45:39  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:45:40  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:45:40  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:45:40  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:45:56  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:45:59  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:45:59  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:02  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:02  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:03  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:03  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:05  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:05  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:06  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:06  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:08  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:08  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:08  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:08  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:09  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:09  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:09  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:10  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:46:10  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:46:10  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:14  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-06-01 13:48:14  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-06-01 13:48:14  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-06-01 13:48:14  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-06-01 13:48:14  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-06-01 13:48:23  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (9.00s)
+2026-06-01 13:48:23  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-06-01 13:48:29  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (5.99s)
+2026-06-01 13:48:29  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-06-01 13:48:30  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-06-01 13:48:30  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-06-01 13:48:35  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (5.27s)
+2026-06-01 13:48:35  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-06-01 13:48:35  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-06-01 13:48:39  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-06-01 13:48:39  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-06-01 13:48:39  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-06-01 13:48:45  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:48:45  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:48:45  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:48:45  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:48:46  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:48:46  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 13:48:46  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:46  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:50  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:50  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:52  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:52  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:54  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:54  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:58  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:58  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:58  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:58  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:48:59  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 13:48:59  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 13:49:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — kata tanya terdeteksi
+2026-06-01 13:49:01  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggula'
+2026-06-01 13:49:01  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:01  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya!'  chat_id=None
+2026-06-01 13:49:01  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 13:49:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: jenis bakteri penyebab penyakit umbi kentang cara penanggulangan nya
+2026-06-01 13:49:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya! jenis bakteri penyebab penyakit umbi kentang cara penanggulangan nya'
+2026-06-01 13:49:01  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 13:49:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:49:01  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.079s)
+2026-06-01 13:49:01  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 13:49:02  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:49:02  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.806s)
+2026-06-01 13:49:02  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 13:49:05  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (3.258s)  skor: min=0.9796  max=0.9969
+2026-06-01 13:49:05  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 13:49:05  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 13:49:05  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 13:49:05  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 13:49:05  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=10154 char  memory=tidak
+2026-06-01 13:49:05  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 4.156s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 13:49:05  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:05  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 513 chunk  3.517s
+2026-06-01 13:49:09  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendalia'
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya?'  chat_id=None
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 13:49:09  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: penyebab penyakit layu fus arium tanaman cabai pengendalian nya
+2026-06-01 13:49:09  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya? penyebab penyakit layu fus arium tanaman cabai pengendalian nya'
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 13:49:09  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.067s)
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 13:49:09  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.116s)
+2026-06-01 13:49:09  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (1.563s)  skor: min=0.6794  max=0.9739
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 13:49:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 13:49:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=7541 char  memory=tidak
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 1.754s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 265 chunk  0.865s
+2026-06-01 13:49:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas seranganny'
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya?'  chat_id=None
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 13:49:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: saja hama utama tanaman cabai rawit intensitas serangan nya
+2026-06-01 13:49:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya? saja hama utama tanaman cabai rawit intensitas serangan nya'
+2026-06-01 13:49:11  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 13:49:12  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:49:12  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.084s)
+2026-06-01 13:49:12  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 13:49:12  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:49:12  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.113s)
+2026-06-01 13:49:12  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 13:49:15  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (3.438s)  skor: min=0.9792  max=0.9921
+2026-06-01 13:49:15  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 13:49:15  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 13:49:15  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 13:49:15  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 13:49:15  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=12752 char  memory=tidak
+2026-06-01 13:49:15  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 3.641s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 13:49:15  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:15  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 172 chunk  22.764s
+2026-06-01 13:49:38  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Bagaimana gejala serangan thrips pada tanaman cabai?'
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Bagaimana gejala serangan thrips pada tanaman cabai?'  chat_id=None
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 13:49:38  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: gejala serangan thr ips tanaman cabai
+2026-06-01 13:49:38  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Bagaimana gejala serangan thrips pada tanaman cabai? gejala serangan thr ips tanaman cabai'
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 13:49:38  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.273s)
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 13:49:38  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.066s)
+2026-06-01 13:49:38  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 13:49:41  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (2.270s)  skor: min=0.9277  max=0.9970
+2026-06-01 13:49:41  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 13:49:41  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 2 jurnal
+2026-06-01 13:49:41  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 13:49:41  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 13:49:41  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=5601 char  memory=tidak
+2026-06-01 13:49:41  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 2.625s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 13:49:41  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:41  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 229 chunk  10.199s
+2026-06-01 13:49:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai?'
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai?'  chat_id=None
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 13:49:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: perbedaan antara predator parasit oid ekosistem tanaman cabai
+2026-06-01 13:49:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai? perbedaan antara predator parasit oid ekosistem tanaman cabai'
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 13:49:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.191s)
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 13:49:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.070s)
+2026-06-01 13:49:51  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 13:49:55  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (3.842s)  skor: min=0.9594  max=0.9919
+2026-06-01 13:49:55  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 13:49:55  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 13:49:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 13:49:55  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 13:49:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=17779 char  memory=tidak
+2026-06-01 13:49:55  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 4.116s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 13:49:55  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:49:55  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 336 chunk  28.819s
+2026-06-01 13:50:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Bagaimana cara mengendalikan penyakit busuk buah antraknosa pada cabai?'
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Bagaimana cara mengendalikan penyakit busuk buah antraknosa pada cabai?'  chat_id=None
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 13:50:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: cara mengendalikan penyakit busuk buah ant rak cabai
+2026-06-01 13:50:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Bagaimana cara mengendalikan penyakit busuk buah antraknosa pada cabai? cara mengendalikan penyakit busuk buah ant rak cabai'
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 13:50:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.287s)
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 13:50:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.158s)
+2026-06-01 13:50:24  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 13:50:26  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (1.551s)  skor: min=0.7313  max=0.9935
+2026-06-01 13:50:26  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 13:50:26  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 13:50:26  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 13:50:26  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 13:50:26  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=7983 char  memory=tidak
+2026-06-01 13:50:26  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 2.002s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 13:50:26  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 13:50:26  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 13:50:40  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 347 chunk  14.706s
+2026-06-01 13:50:46  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:50:46  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:50:49  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:50:49  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:50:52  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:50:52  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:50:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:50:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:50:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:50:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:50:58  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:50:59  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:51:00  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:51:00  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:51:27  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:51:27  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:51:54  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:51:54  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:52:22  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:52:22  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:52:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:52:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:52:27  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:52:27  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:52:29  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:52:29  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:52:32  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:52:32  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:52:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:52:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:52:40  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:52:40  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:52:41  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:52:41  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 13:52:43  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 13:52:43  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:01:21  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-06-01 14:01:21  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-06-01 14:01:21  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-06-01 14:01:21  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-06-01 14:01:21  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-06-01 14:01:31  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (9.45s)
+2026-06-01 14:01:31  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-06-01 14:01:37  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (6.53s)
+2026-06-01 14:01:37  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-06-01 14:01:38  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-06-01 14:01:38  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-06-01 14:01:43  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (5.19s)
+2026-06-01 14:01:43  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-06-01 14:01:43  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-06-01 14:01:47  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-06-01 14:01:47  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-06-01 14:01:47  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-06-01 14:01:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:01:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:01:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:01:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:01:56  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:01:56  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:01:56  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:01:56  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:01:58  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:01:58  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:00  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:00  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:02  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:02  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:04  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:04  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:05  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:05  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:06  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:06  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:07  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:07  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:07  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:07  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:08  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:08  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:08  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:02:08  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:02:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — kata tanya terdeteksi
+2026-06-01 14:02:11  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggula'
+2026-06-01 14:02:11  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:02:11  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya!'  chat_id=None
+2026-06-01 14:02:11  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:02:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: jenis bakteri penyebab penyakit umbi kentang cara penanggulangan nya
+2026-06-01 14:02:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya! jenis bakteri penyebab penyakit umbi kentang cara penanggulangan nya'
+2026-06-01 14:02:11  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:02:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:02:11  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.061s)
+2026-06-01 14:02:11  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:02:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:02:11  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.062s)
+2026-06-01 14:02:11  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:02:14  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (3.277s)  skor: min=0.9796  max=0.9969
+2026-06-01 14:02:14  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:02:14  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:02:14  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:02:14  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:02:14  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=10154 char  memory=tidak
+2026-06-01 14:02:14  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 3.407s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:02:14  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:02:14  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 361 chunk  1.443s
+2026-06-01 14:02:16  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendalia'
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya?'  chat_id=None
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:02:16  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: penyebab penyakit layu fus arium tanaman cabai pengendalian nya
+2026-06-01 14:02:16  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya? penyebab penyakit layu fus arium tanaman cabai pengendalian nya'
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:02:16  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.084s)
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:02:16  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.110s)
+2026-06-01 14:02:16  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:02:18  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (1.607s)  skor: min=0.6794  max=0.9739
+2026-06-01 14:02:18  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:02:18  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:02:18  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:02:18  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:02:18  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=7541 char  memory=tidak
+2026-06-01 14:02:18  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 1.808s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:02:18  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:02:18  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 307 chunk  0.970s
+2026-06-01 14:02:19  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas seranganny'
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya?'  chat_id=None
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:02:19  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: saja hama utama tanaman cabai rawit intensitas serangan nya
+2026-06-01 14:02:19  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya? saja hama utama tanaman cabai rawit intensitas serangan nya'
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:02:19  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.079s)
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:02:19  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.080s)
+2026-06-01 14:02:19  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:02:22  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (3.249s)  skor: min=0.9792  max=0.9921
+2026-06-01 14:02:22  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:02:22  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:02:22  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:02:22  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:02:22  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=12752 char  memory=tidak
+2026-06-01 14:02:22  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 3.416s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:02:22  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:02:22  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:02:44  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 164 chunk  22.116s
+2026-06-01 14:02:44  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:02:44  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Bagaimana gejala serangan thrips pada tanaman cabai?'
+2026-06-01 14:02:44  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:02:44  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Bagaimana gejala serangan thrips pada tanaman cabai?'  chat_id=None
+2026-06-01 14:02:44  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:02:44  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: gejala serangan thr ips tanaman cabai
+2026-06-01 14:02:44  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Bagaimana gejala serangan thrips pada tanaman cabai? gejala serangan thr ips tanaman cabai'
+2026-06-01 14:02:44  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:02:46  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:02:46  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (1.763s)
+2026-06-01 14:02:46  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:02:46  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:02:46  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.113s)
+2026-06-01 14:02:46  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:02:48  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (2.166s)  skor: min=0.9277  max=0.9970
+2026-06-01 14:02:48  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:02:48  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 2 jurnal
+2026-06-01 14:02:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:02:48  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:02:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=5601 char  memory=tidak
+2026-06-01 14:02:48  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 4.055s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:02:48  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:02:48  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:02:55  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 226 chunk  7.285s
+2026-06-01 14:02:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:02:55  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai?'
+2026-06-01 14:02:55  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:02:55  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai?'  chat_id=None
+2026-06-01 14:02:55  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:02:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: perbedaan antara predator parasit oid ekosistem tanaman cabai
+2026-06-01 14:02:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai? perbedaan antara predator parasit oid ekosistem tanaman cabai'
+2026-06-01 14:02:55  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:02:56  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:02:56  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.247s)
+2026-06-01 14:02:56  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:02:56  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:02:56  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.054s)
+2026-06-01 14:02:56  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:03:06  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (10.430s)  skor: min=0.9594  max=0.9919
+2026-06-01 14:03:06  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:03:06  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:03:06  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:03:06  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:03:06  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=17779 char  memory=tidak
+2026-06-01 14:03:06  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 10.744s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:03:06  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:03:06  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:03:29  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 375 chunk  23.218s
+2026-06-01 14:03:29  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:03:29  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Bagaimana cara mengendalikan penyakit busuk buah antraknosa pada cabai?'
+2026-06-01 14:03:29  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:03:29  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Bagaimana cara mengendalikan penyakit busuk buah antraknosa pada cabai?'  chat_id=None
+2026-06-01 14:03:29  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:03:29  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: cara mengendalikan penyakit busuk buah ant rak cabai
+2026-06-01 14:03:29  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Bagaimana cara mengendalikan penyakit busuk buah antraknosa pada cabai? cara mengendalikan penyakit busuk buah ant rak cabai'
+2026-06-01 14:03:29  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:03:30  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:03:30  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.156s)
+2026-06-01 14:03:30  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:03:30  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:03:30  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.038s)
+2026-06-01 14:03:30  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:03:31  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (1.634s)  skor: min=0.7313  max=0.9935
+2026-06-01 14:03:31  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:03:31  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:03:31  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:03:31  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:03:31  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=7983 char  memory=tidak
+2026-06-01 14:03:31  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 1.834s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:03:31  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:03:31  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:03:47  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 363 chunk  15.967s
+2026-06-01 14:03:53  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:03:53  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:03:56  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:03:56  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:03:59  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:03:59  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:04:02  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:04:02  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:04:04  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:04:04  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:04:05  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:04:05  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:04:07  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:04:07  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:04:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:04:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:05:04  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:05:04  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:05:34  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:05:34  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:05:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:05:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:05:38  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:05:38  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:05:40  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:05:40  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:05:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:05:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:06:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:06:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:06:12  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:06:12  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:06:14  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:06:14  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:06:15  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:06:15  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:10:34  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-06-01 14:10:34  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-06-01 14:10:34  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-06-01 14:10:34  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-06-01 14:10:34  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-06-01 14:10:43  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (9.67s)
+2026-06-01 14:10:43  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-06-01 14:10:50  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (6.48s)
+2026-06-01 14:10:50  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-06-01 14:10:50  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-06-01 14:10:50  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-06-01 14:10:56  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (6.17s)
+2026-06-01 14:10:56  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-06-01 14:10:56  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-06-01 14:11:02  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-06-01 14:11:02  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-06-01 14:11:02  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-06-01 14:11:10  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:11:10  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:11:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:11:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:11:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:11:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:11:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:11  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:14  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:14  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:16  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:16  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:17  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:17  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:18  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:18  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:20  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:20  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:22  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:22  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:23  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:23  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:23  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:23  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:11:24  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:11:27  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — kata tanya terdeteksi
+2026-06-01 14:11:27  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggula'
+2026-06-01 14:11:27  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:11:27  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya!'  chat_id=None
+2026-06-01 14:11:27  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:11:27  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: jenis bakteri penyebab penyakit umbi kentang cara penanggulangan nya
+2026-06-01 14:11:27  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya! jenis bakteri penyebab penyakit umbi kentang cara penanggulangan nya'
+2026-06-01 14:11:27  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:11:27  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:11:27  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.090s)
+2026-06-01 14:11:27  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:11:28  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:11:28  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.056s)
+2026-06-01 14:11:28  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:11:31  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (3.271s)  skor: min=0.9796  max=0.9969
+2026-06-01 14:11:31  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:11:31  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:11:31  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:11:31  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:11:31  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=10154 char  memory=tidak
+2026-06-01 14:11:31  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 3.435s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:11:31  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:11:31  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 368 chunk  1.539s
+2026-06-01 14:11:32  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendalia'
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya?'  chat_id=None
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:11:32  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: penyebab penyakit layu fus arium tanaman cabai pengendalian nya
+2026-06-01 14:11:32  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya? penyebab penyakit layu fus arium tanaman cabai pengendalian nya'
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:11:32  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.115s)
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:11:32  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.034s)
+2026-06-01 14:11:32  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:11:34  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (1.577s)  skor: min=0.6794  max=0.9739
+2026-06-01 14:11:34  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:11:34  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:11:34  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:11:34  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:11:34  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=7541 char  memory=tidak
+2026-06-01 14:11:34  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 1.736s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:11:34  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:11:34  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:11:35  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 319 chunk  1.274s
+2026-06-01 14:11:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:11:35  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas seranganny'
+2026-06-01 14:11:35  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:11:35  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya?'  chat_id=None
+2026-06-01 14:11:35  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:11:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: saja hama utama tanaman cabai rawit intensitas serangan nya
+2026-06-01 14:11:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya? saja hama utama tanaman cabai rawit intensitas serangan nya'
+2026-06-01 14:11:35  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:11:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:11:35  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.113s)
+2026-06-01 14:11:35  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:11:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:11:36  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.045s)
+2026-06-01 14:11:36  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:11:39  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (3.278s)  skor: min=0.9792  max=0.9921
+2026-06-01 14:11:39  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:11:39  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:11:39  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:11:39  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:11:39  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=12752 char  memory=tidak
+2026-06-01 14:11:39  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 3.451s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:11:39  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:11:39  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 159 chunk  22.420s
+2026-06-01 14:12:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Bagaimana gejala serangan thrips pada tanaman cabai?'
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Bagaimana gejala serangan thrips pada tanaman cabai?'  chat_id=None
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:12:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: gejala serangan thr ips tanaman cabai
+2026-06-01 14:12:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Bagaimana gejala serangan thrips pada tanaman cabai? gejala serangan thr ips tanaman cabai'
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:12:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.151s)
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:12:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.098s)
+2026-06-01 14:12:01  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:12:04  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (2.168s)  skor: min=0.9277  max=0.9970
+2026-06-01 14:12:04  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:12:04  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 2 jurnal
+2026-06-01 14:12:04  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:12:04  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:12:04  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=5601 char  memory=tidak
+2026-06-01 14:12:04  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 2.430s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:12:04  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:12:04  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 226 chunk  9.216s
+2026-06-01 14:12:13  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai?'
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai?'  chat_id=None
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:12:13  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: perbedaan antara predator parasit oid ekosistem tanaman cabai
+2026-06-01 14:12:13  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai? perbedaan antara predator parasit oid ekosistem tanaman cabai'
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:12:13  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.291s)
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:12:13  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.058s)
+2026-06-01 14:12:13  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:12:23  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (10.155s)  skor: min=0.9594  max=0.9919
+2026-06-01 14:12:23  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:12:23  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:12:23  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:12:23  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:12:23  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=17779 char  memory=tidak
+2026-06-01 14:12:23  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 10.519s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:12:23  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:12:23  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:12:35  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 319 chunk  11.994s
+2026-06-01 14:12:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:12:35  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Bagaimana cara mengendalikan penyakit busuk buah antraknosa pada cabai?'
+2026-06-01 14:12:35  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:12:35  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Bagaimana cara mengendalikan penyakit busuk buah antraknosa pada cabai?'  chat_id=None
+2026-06-01 14:12:35  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:12:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: cara mengendalikan penyakit busuk buah ant rak cabai
+2026-06-01 14:12:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Bagaimana cara mengendalikan penyakit busuk buah antraknosa pada cabai? cara mengendalikan penyakit busuk buah ant rak cabai'
+2026-06-01 14:12:35  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:12:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:12:36  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.220s)
+2026-06-01 14:12:36  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:12:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:12:36  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.048s)
+2026-06-01 14:12:36  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:12:37  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (1.653s)  skor: min=0.7313  max=0.9935
+2026-06-01 14:12:37  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:12:37  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:12:37  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:12:37  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:12:37  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=7983 char  memory=tidak
+2026-06-01 14:12:37  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 1.935s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:12:37  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:12:37  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:13:01  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 358 chunk  23.784s
+2026-06-01 14:13:07  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:13:07  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:13:10  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:13:10  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:13:13  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:13:13  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:13:16  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:13:16  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:13:18  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:13:18  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:13:19  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:13:19  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:13:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:13:21  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:13:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:13:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:14:15  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:14:15  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:14:44  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:14:44  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:14:47  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:14:47  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:14:49  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:14:49  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:14:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:14:51  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:15:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:15:01  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:15:12  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:15:12  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:15:22  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:15:22  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:15:23  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:15:23  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:15:25  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:15:25  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:18:02  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-06-01 14:18:02  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-06-01 14:18:02  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-06-01 14:18:02  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-06-01 14:18:02  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-06-01 14:18:11  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (9.34s)
+2026-06-01 14:18:11  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-06-01 14:18:18  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (6.46s)
+2026-06-01 14:18:18  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-06-01 14:18:18  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-06-01 14:18:18  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-06-01 14:18:24  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (5.74s)
+2026-06-01 14:18:24  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-06-01 14:18:24  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-06-01 14:18:28  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-06-01 14:18:28  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-06-01 14:18:28  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.
+2026-06-01 14:18:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:18:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:18:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:18:35  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:18:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:18:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 10 kandidat ditemukan (k=10)
+2026-06-01 14:18:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:36  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:39  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:39  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:40  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:40  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:42  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:42  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:43  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:43  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:44  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:44  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:45  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:45  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:47  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:47  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:47  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:47  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:48  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:49  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 5 kandidat ditemukan (k=5)
+2026-06-01 14:18:49  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 5/5 berhasil diperkaya
+2026-06-01 14:18:52  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — kata tanya terdeteksi
+2026-06-01 14:18:52  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggula'
+2026-06-01 14:18:52  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:18:52  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya!'  chat_id=None
+2026-06-01 14:18:52  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:18:52  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: jenis bakteri penyebab penyakit umbi kentang cara penanggulangan nya
+2026-06-01 14:18:52  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya! jenis bakteri penyebab penyakit umbi kentang cara penanggulangan nya'
+2026-06-01 14:18:52  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:18:52  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:18:52  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.080s)
+2026-06-01 14:18:52  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:18:52  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:18:52  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.060s)
+2026-06-01 14:18:52  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:18:55  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (3.291s)  skor: min=0.9796  max=0.9969
+2026-06-01 14:18:55  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:18:55  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:18:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:18:55  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:18:55  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=10154 char  memory=tidak
+2026-06-01 14:18:55  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 3.439s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:18:55  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:18:55  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 332 chunk  1.954s
+2026-06-01 14:18:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendalia'
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya?'  chat_id=None
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:18:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: penyebab penyakit layu fus arium tanaman cabai pengendalian nya
+2026-06-01 14:18:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya? penyebab penyakit layu fus arium tanaman cabai pengendalian nya'
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:18:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.097s)
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:18:57  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.045s)
+2026-06-01 14:18:57  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:18:59  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (1.565s)  skor: min=0.6794  max=0.9739
+2026-06-01 14:18:59  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:18:59  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:18:59  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:18:59  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:18:59  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=7541 char  memory=tidak
+2026-06-01 14:18:59  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 1.718s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:18:59  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:18:59  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 313 chunk  1.239s
+2026-06-01 14:19:00  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Intent] knowledge — tanda tanya
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  Intent terdeteksi: knowledge — query='Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas seranganny'
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Query: 'Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya?'  chat_id=None
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Bahasa terdeteksi: id
+2026-06-01 14:19:00  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [NLP-ID] keywords: saja hama utama tanaman cabai rawit intensitas serangan nya
+2026-06-01 14:19:00  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Knowledge] Query diperkaya: 'Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya? saja hama utama tanaman cabai rawit intensitas serangan nya'
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] ChromaDB retrieval (k=12)...
+2026-06-01 14:19:00  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  ChromaDB: 12 kandidat ditemukan (k=12)
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 1] 12 kandidat ditemukan  (0.081s)
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] Neo4j enrichment (12 kandidat, window=±1)...
+2026-06-01 14:19:00  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  Neo4j enrich: 12/12 berhasil diperkaya
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 2] 12 chunk diperkaya  (0.067s)
+2026-06-01 14:19:00  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] BGE reranking (12 → top 6) @ GPU...
+2026-06-01 14:19:03  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 3] Top 6 dipilih  (3.264s)  skor: min=0.9792  max=0.9921
+2026-06-01 14:19:03  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Filtering: max 3/jurnal → ambil top 3...
+2026-06-01 14:19:03  [36mINFO    [0m  [38;5;245magribot[0m  [Tahap 4] Final: 3 chunk dari 1 jurnal
+2026-06-01 14:19:03  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [Tahap 5] chat_id=None — memory dilewati.
+2026-06-01 14:19:03  [36mINFO    [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  context_max_chars(CONFIG)=24000  max_chars(efektif)=24000
+2026-06-01 14:19:03  [38;5;245mDEBUG   [0m  [38;5;245magribot[0m  [BuildMessages] tier=large  model=llama-3.3-70b-versatile  prompt=knowledge_system_id  lang=id  context=12752 char  memory=tidak
+2026-06-01 14:19:03  [36mINFO    [0m  [38;5;245magribot[0m  [Knowledge] Pipeline selesai — 3.422s  |  chunks=3  sumber=3  memory=tidak
+2026-06-01 14:19:03  [36mINFO    [0m  [38;5;245magribot[0m  ════════════════════════════════════════════════════════════
+2026-06-01 14:19:03  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] Generate — model=llama-3.3-70b-versatile  max_tokens=2048  temperature=0.20  top_p=0.95
+2026-06-01 14:19:03  [31mERROR   [0m  [38;5;245magribot[0m  [Groq] Error saat streaming
+Traceback (most recent call last):
+  File "F:\proyek magang\chatbot3\pipeline.py", line 1856, in _generate_stream_groq
+    stream = self.models.groq_client.chat.completions.create(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\proyek magang\chatbot3\venv\Lib\site-packages\groq\resources\chat\completions.py", line 461, in create
+    return self._post(
+           ^^^^^^^^^^^
+  File "F:\proyek magang\chatbot3\venv\Lib\site-packages\groq\_base_client.py", line 1242, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\proyek magang\chatbot3\venv\Lib\site-packages\groq\_base_client.py", line 1044, in request
+    raise self._make_status_error_from_response(err.response) from None
+groq.RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kgct53n0ewvtm1naa3z49k6q` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98150, Requested 4556. Please try again in 38m57.984s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-06-01 14:19:04  [36mINFO    [0m  [38;5;245magribot[0m  [Groq] ✓ Selesai — 0 chunk  0.242s
