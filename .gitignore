@@ -5,5 +5,5 @@ venv
 .env
 supabase_password.txt
 output
-__pycache
+__pycache__
 agribot.log

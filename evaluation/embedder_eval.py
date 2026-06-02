@@ -85,7 +85,7 @@ class EmbedderEvaluator:
                 
                 # Semantic similarity between query and context
                 ctx_emb = self.models.get_embedding(context_text)
-                similarity = 1 - np.dot(query_emb, ctx_emb) / (
+                similarity = np.dot(query_emb, ctx_emb) / (
                     np.linalg.norm(query_emb) * np.linalg.norm(ctx_emb) + 1e-8
                 )
                 results["graph"]["similarity_to_query"].append(similarity)
@@ -108,7 +108,7 @@ class EmbedderEvaluator:
                 )
                 
                 raw_emb = self.models.get_embedding(raw_text)
-                similarity = 1 - np.dot(query_emb, raw_emb) / (
+                similarity = np.dot(query_emb, raw_emb) / (
                     np.linalg.norm(query_emb) * np.linalg.norm(raw_emb) + 1e-8
                 )
                 results["raw"]["similarity_to_query"].append(similarity)

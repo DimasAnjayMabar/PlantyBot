@@ -260,6 +260,7 @@ class RAGEvaluator:
         timing_stats = {
             "total_times": [],
             "retrieval_times": [],
+            "enrichment_times": [],
             "rerank_times": [],
             "generation_times": [],
             "memory_times": []
@@ -279,7 +280,7 @@ class RAGEvaluator:
                 # Enrichment
                 t2 = time.perf_counter()
                 enriched = self.pipeline.neo4j.enrich(candidates, context_window=1)
-                timing_stats["retrieval_times"].append(time.perf_counter() - t2)
+                timing_stats["enrichment_times"].append(time.perf_counter() - t2)
                 
                 # Reranking
                 t3 = time.perf_counter()
@@ -303,6 +304,10 @@ class RAGEvaluator:
             "retrieval": {
                 "mean": np.mean(timing_stats["retrieval_times"]),
                 "std": np.std(timing_stats["retrieval_times"])
+            },
+            "enrichment": {
+                "mean": np.mean(timing_stats["enrichment_times"]) if timing_stats["enrichment_times"] else 0.0,
+                "std": np.std(timing_stats["enrichment_times"]) if timing_stats["enrichment_times"] else 0.0
             },
             "rerank": {
                 "mean": np.mean(timing_stats["rerank_times"]),
@@ -360,14 +365,19 @@ class RAGEvaluator:
             if hasattr(chunk, 'context_text'):
                 contexts.append(chunk.context_text)
             elif isinstance(chunk, dict):
-                contexts.append(chunk.get('text', chunk.get('context_text', '')))
+                # Raw RAG mengembalikan dict dengan key 'text', fallback ke 'context_text'
+                text = chunk.get('text', chunk.get('context_text', ''))
+                if text:
+                    contexts.append(text)
+            elif isinstance(chunk, str):
+                contexts.append(chunk)
         
         if not contexts:
             return False
         
         # Hitung similarity claim dengan setiap chunk
-        pairs = [[claim, ctx[:512]] for ctx in contexts]
-        scores = self.models.rerank(claim, [ctx[:512] for ctx in contexts])
+        pairs = [[claim, ctx[:1024]] for ctx in contexts]
+        scores = self.models.rerank(claim, [ctx[:1024] for ctx in contexts])
         
         # Jika ada chunk dengan similarity > threshold, claim terverifikasi
         threshold = 0.4
@@ -421,10 +431,16 @@ class RAGEvaluator:
             return []
         
         # Gabungkan teks dari chunks
-        all_text = " ".join([
-            c.context_text if hasattr(c, 'context_text') else str(c)
-            for c in chunks
-        ])[:2000]
+        def _get_chunk_text(c) -> str:
+            if hasattr(c, 'context_text'):
+                return c.context_text
+            if isinstance(c, dict):
+                return c.get('text', c.get('context_text', ''))
+            if isinstance(c, str):
+                return c
+            return ''
+
+        all_text = " ".join([_get_chunk_text(c) for c in chunks])[:2000]
         
         # Cari kalimat yang mengandung hubungan sebab-akibat
         causal_sentences = []

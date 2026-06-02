@@ -1470,7 +1470,7 @@ class RAGPipeline:
         return RAGResponse(
             answer=answer_gen,
             sources=sources,
-            final_chunks=[],
+            final_chunks=top_chunks,
             processing_time=elapsed,
             intent="knowledge",
         )
