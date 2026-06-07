@@ -6,6 +6,11 @@ import time
 from typing import List, Dict, Optional, Generator
 from dataclasses import dataclass
 
+import base64
+import io
+from PIL import Image
+import google.generativeai as genai
+
 import torch
 from groq import Groq
 from transformers import (
@@ -656,6 +661,7 @@ class RAGPipeline:
         chat_id:    int | None = None,
         stop_event: threading.Event = None,
         user_id:    int | None = None,
+        base64_image: str | None = None, # <--- TAMBAHAN ARGUMEN
     ) -> RAGResponse:
         """
         Entry point utama. Deteksi intent lalu delegasikan ke pipeline
@@ -674,6 +680,38 @@ class RAGPipeline:
         'user_identity'. Identitas digabung ke blok memory — TIDAK
         diinjek langsung ke base prompt.
         """
+
+        if base64_image:
+            log.info("═" * 60)
+            log.info("[Vision RAG] Langkah 1: Menganalisis gambar menggunakan Gemini...")
+            image_description = self._analyze_image(base64_image)
+            log.info(f"[Vision RAG] Hasil Ekstraksi: {image_description[:100]}...")
+            
+            # --- PERBAIKAN: CEGAH GROQ MENGANALISIS PESAN ERROR GEMINI ---
+            if image_description.startswith("Gagal") or image_description.startswith("Gambar diterima"):
+                def error_stream():
+                    yield f"⚠️ **Sistem Vision Error:**\n\n{image_description}\n\n_Tips: Ini biasanya terjadi karena batas limit API gratis per menit. Silakan tunggu sekitar 1 menit lalu coba kirim ulang gambar Anda._"
+                
+                return RAGResponse(
+                    answer=error_stream(),
+                    sources=[],
+                    final_chunks=[],
+                    processing_time=0.0,
+                    intent="vision_error"
+                )
+            # --------------------------------------------------------------
+            
+            # Jika sukses, gabungkan hasil analisa gambar dengan query asli
+            if query.strip() and query.strip() != "Tolong jelaskan gambar tanaman ini.":
+                enriched_query = f"Pengguna mengunggah gambar dengan hasil analisis visi dari pakar berikut:\n'{image_description}'\n\nBerdasarkan analisis visual tersebut, pengguna bertanya: '{query}'. Tolong berikan jawaban yang komprehensif."
+            else:
+                enriched_query = f"Pengguna mengunggah gambar dengan hasil analisis visi dari pakar berikut:\n'{image_description}'\n\nTolong jelaskan kondisi tanaman tersebut, kemungkinan penyebab, dan cara penanganannya."
+            
+            log.info("[Vision RAG] Langkah 2: Mengirim gabungan teks ke pipeline Knowledge Retrieval...")
+            return self.process_knowledge_query(enriched_query, chat_id=chat_id, stop_event=stop_event, user_id=user_id)
+        # ----------------------------------------------
+
+        # Jika tidak ada gambar, lanjutkan seperti biasa
         # ── Koreksi typo via IndoBERT MLM (hanya untuk query Bahasa Indonesia) ─
         lang_pre = self._detect_language(query)
         if lang_pre == "id":
@@ -1348,6 +1386,59 @@ class RAGPipeline:
             processing_time=elapsed,
             intent="knowledge",
         )
+    
+    def process_vision_query(
+        self,
+        query: str,
+        base64_image: str,
+        chat_id: int | None = None,
+        user_id: int | None = None,
+        stop_event: threading.Event = None,
+    ) -> RAGResponse:
+        t_start = time.perf_counter()
+        log.info("═" * 60)
+        log.info("[Vision] Memproses gambar dengan Gemini 3 Flash Preview...")
+
+        gemini_api_key = os.environ.get("GEMINI_API_KEY")
+        if not gemini_api_key:
+            raise EnvironmentError("GEMINI_API_KEY tidak ditemukan di file .env")
+        
+        genai.configure(api_key=gemini_api_key)
+        model = genai.GenerativeModel('gemini-3-flash-preview')
+
+        try:
+            image_data = base64.b64decode(base64_image)
+            img = Image.open(io.BytesIO(image_data))
+        except Exception as e:
+            log.error(f"[Vision] Gagal memuat gambar: {e}")
+            raise ValueError("Data gambar tidak valid atau korup.")
+
+        prompt = f"Sebagai pakar pertanian (AgriBot), tolong analisis gambar ini secara detail.\n\nKonteks/Pertanyaan pengguna: {query}"
+
+        def stream_generator():
+            try:
+                response = model.generate_content([prompt, img], stream=True)
+                for chunk in response:
+                    if stop_event and stop_event.is_set():
+                        log.info("[Gemini] Streaming dihentikan oleh user.")
+                        break
+                    if chunk.text:
+                        yield chunk.text
+            except Exception as e:
+                log.error(f"[Gemini] Error saat streaming API: {e}")
+                yield f"\n\n[Sistem] Maaf, terjadi kesalahan dari server Gemini. Detail: {e}"
+
+        elapsed = time.perf_counter() - t_start
+        log.info("[Vision] Gambar berhasil dikirim ke Gemini (%.3fs)", elapsed)
+        log.info("═" * 60)
+
+        return RAGResponse(
+            answer=stream_generator(),
+            sources=[],       
+            final_chunks=[],
+            processing_time=elapsed,
+            intent="vision",
+        )
 
     def process_regular_query(
         self,
@@ -2003,6 +2094,32 @@ class RAGPipeline:
             }
             for c in enriched
         ]
+    
+    def _analyze_image(self, base64_image: str) -> str:
+        """Langkah 1: Ekstrak informasi dari gambar menjadi teks deskriptif."""
+        gemini_api_key = os.environ.get("GEMINI_API_KEY")
+        if not gemini_api_key:
+            return "Gambar diterima, tetapi GEMINI_API_KEY tidak ditemukan di environment."
+        
+        genai.configure(api_key=gemini_api_key)
+        # Gunakan model Gemini yang tersedia di akun Anda
+        model = genai.GenerativeModel('gemini-2.0-flash') 
+        
+        try:
+            image_data = base64.b64decode(base64_image)
+            img = Image.open(io.BytesIO(image_data))
+        except Exception as e:
+            log.error(f"[Vision] Gagal memuat gambar: {e}")
+            return "Gambar yang diunggah rusak atau tidak dapat dibaca."
+            
+        prompt = "Sebagai pakar pertanian, tolong identifikasi dan jelaskan apa yang terlihat pada gambar tanaman ini secara detail, khususnya jika terdapat gejala penyakit, hama, atau kondisi abnormal."
+        
+        try:
+            response = model.generate_content([prompt, img])
+            return response.text
+        except Exception as e:
+            log.error(f"[Gemini] Error analisis gambar: {e}")
+            return f"Gagal menganalisis gambar dari server: {e}"
 
 
 ############################################################

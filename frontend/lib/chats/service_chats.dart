@@ -26,49 +26,34 @@ const _kBaseUrl = 'http://localhost:8000';
 const _kTokenRefreshInterval = Duration(minutes: 25);
 
 // ---------------------------------------------------------------------------
-// Model Preference Storage - Menyimpan model yang dipilih user
+// Model Preference Storage
 // ---------------------------------------------------------------------------
 
 class ModelPreferenceStorage {
   static const String _keySelectedModel = 'selected_model_id';
-  static const String _keySelectedMode = 'selected_llm_mode'; // 'groq' or 'local'
+  static const String _keySelectedMode = 'selected_llm_mode'; 
   
-  /// Simpan model yang dipilih
   static Future<void> saveSelectedModel(String modelId) async {
     await TokenStorage.write(key: _keySelectedModel, value: modelId);
-    print('💾 Model preference saved: $modelId');
   }
   
-  /// Ambil model yang tersimpan
   static Future<String?> getSelectedModel() async {
     return await TokenStorage.read(key: _keySelectedModel);
   }
   
-  /// Simpan mode LLM (groq/local)
   static Future<void> saveSelectedMode(String mode) async {
     await TokenStorage.write(key: _keySelectedMode, value: mode);
-    print('💾 Mode preference saved: $mode');
   }
   
-  /// Ambil mode yang tersimpan
   static Future<String?> getSelectedMode() async {
     return await TokenStorage.read(key: _keySelectedMode);
   }
   
-  /// Hapus semua preference model
   static Future<void> clearModelPreference() async {
     await TokenStorage.delete(key: _keySelectedModel);
     await TokenStorage.delete(key: _keySelectedMode);
   }
 }
-
-// ---------------------------------------------------------------------------
-// Token Storage — Abstraction Layer
-//
-// Web/Chrome  → SharedPreferences (localStorage) — persisten lintas restart browser
-// Android     → FlutterSecureStorage (EncryptedSharedPreferences) — enkripsi AES-256
-//               kunci disimpan di Android Keystore (hardware-backed)
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Models
@@ -95,6 +80,7 @@ class ChatMessage {
   String response;
   String processingStatus;
   final String createdAt;
+  Uint8List? localImageBytes; // <--- DITAMBAHKAN UNTUK VISION RAG
 
   ChatMessage({
     required this.id,
@@ -103,11 +89,13 @@ class ChatMessage {
     required this.response,
     required this.processingStatus,
     required this.createdAt,
+    this.localImageBytes,
   });
 
   ChatMessage copyWith({
     String? response,
     String? processingStatus,
+    Uint8List? localImageBytes,
   }) {
     return ChatMessage(
       id: id,
@@ -116,6 +104,7 @@ class ChatMessage {
       response: response ?? this.response,
       processingStatus: processingStatus ?? this.processingStatus,
       createdAt: createdAt,
+      localImageBytes: localImageBytes ?? this.localImageBytes,
     );
   }
 
@@ -124,6 +113,7 @@ class ChatMessage {
     required int chatId,
     required String question,
     required String createdAt,
+    Uint8List? localImageBytes,
   }) =>
       ChatMessage(
         id: id,
@@ -132,6 +122,7 @@ class ChatMessage {
         response: '',
         processingStatus: 'pending',
         createdAt: createdAt,
+        localImageBytes: localImageBytes,
       );
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -141,6 +132,7 @@ class ChatMessage {
         response: j['response'] as String? ?? '',
         processingStatus: j['processing_status'] as String? ?? 'pending',
         createdAt: j['created_at'] as String,
+        localImageBytes: null, 
       );
 
   bool get isPending => processingStatus == 'pending';
@@ -190,14 +182,11 @@ class SseClient {
     http.StreamedResponse response;
     try {
       response = await client.send(request);
-      print('✅ SSE Connected, status: ${response.statusCode}');
     } catch (e) {
-      print('❌ SSE Connection failed: $e');
       throw Exception('SSE connect gagal: $e');
     }
 
     if (response.statusCode != 200) {
-      print('❌ SSE HTTP error: ${response.statusCode}');
       throw Exception('SSE connect gagal: HTTP ${response.statusCode}');
     }
 
@@ -207,35 +196,26 @@ class SseClient {
     try {
       await for (final chunk in response.stream.transform(utf8.decoder)) {
         buffer += chunk;
-
         final lines = buffer.split('\n');
         buffer = lines.last;
 
         for (var i = 0; i < lines.length - 1; i++) {
           final line = lines[i].trim();
-
-          if (line.isEmpty) {
-            continue;
-          }
+          if (line.isEmpty) continue;
 
           if (line.startsWith('event:')) {
             currentEventType = line.substring(6).trim();
-            print('📡 SSE Event Type: $currentEventType');
           } else if (line.startsWith('data:')) {
             final data = line.substring(5).trim();
-            print('📡 SSE Data: $data');
             if (data.isNotEmpty) {
               yield SseEvent(type: currentEventType, data: data);
               currentEventType = 'message';
             }
-          } else if (line.startsWith(':')) {
-            print('💓 SSE Heartbeat');
           }
         }
       }
     } finally {
       client.close();
-      print('🏁 SSE Client closed');
     }
   }
 }
@@ -249,11 +229,9 @@ class ChatService {
   int? _userId;
   Timer? _tokenTimer;
   
-  // ── Model State ──────────────────────────────────────────────────────────
   String? _currentModelId;
-  String? _currentMode; // 'groq' or 'local'
+  String? _currentMode; 
 
-  // Instance AudioPlayer & State Tracker untuk memutar TTS
   final AudioPlayer _audioPlayer = AudioPlayer();
   final ValueNotifier<int?> playingTtsId = ValueNotifier<int?>(null);
   int? _currentTtsRequestDetailId;
@@ -264,17 +242,15 @@ class ChatService {
 
   Map<String, dynamic> get _authHeader => {'Authorization': 'Bearer $_accessToken'};
 
-  // Callbacks untuk UI
   final VoidCallback? onForceLogout;
   final void Function(String? token)? onTokenUpdated;
-  final void Function(String? modelId)? onModelChanged; // ← callback baru
+  final void Function(String? modelId)? onModelChanged;
 
   ChatService({
     this.onForceLogout,
     this.onTokenUpdated,
     this.onModelChanged,
   }) {
-    // Memantau status player agar tombol kembali normal jika audio selesai/stop otomatis
     _audioPlayer.onPlayerComplete.listen((_) {
       playingTtsId.value = null;
     });
@@ -285,38 +261,24 @@ class ChatService {
     });
   }
 
-  // -------------------------------------------------------------------------
-  // Model Preference Methods
-  // -------------------------------------------------------------------------
-
-  /// Inisialisasi model preference dari storage
   Future<void> initModelPreference() async {
     try {
-      // Ambil dari storage
       _currentModelId = await ModelPreferenceStorage.getSelectedModel();
       _currentMode = await ModelPreferenceStorage.getSelectedMode();
       
       if (_currentModelId != null && _currentMode != null) {
-        print('🔄 Loading saved model preference: mode=$_currentMode, model=$_currentModelId');
-        
-        // Sinkronkan dengan backend
         final success = await _setModelInternal(_currentMode!, path: _currentModelId);
         if (success) {
-          print('✅ Model preference synced with backend');
           onModelChanged?.call(_currentModelId);
-        } else {
-          print('⚠️ Failed to sync model with backend, using saved preference anyway');
         }
       } else {
-        // Jika belum ada preference, gunakan default dari backend
         await _syncModelFromBackend();
       }
     } catch (e) {
-      print('❌ Error loading model preference: $e');
+      debugPrint('Error loading model preference: $e');
     }
   }
 
-  /// Sync model dari backend (untuk memastikan konsistensi)
   Future<void> _syncModelFromBackend() async {
     try {
       final res = await _dio.get(
@@ -330,22 +292,16 @@ class ChatService {
         _currentModelId = modelId;
         _currentMode = mode;
         
-        // Simpan ke storage
         await ModelPreferenceStorage.saveSelectedModel(modelId);
         await ModelPreferenceStorage.saveSelectedMode(mode);
-        
-        print('✅ Synced model from backend: mode=$mode, model=$modelId');
         onModelChanged?.call(modelId);
       }
     } catch (e) {
-      print('⚠️ Failed to sync model from backend: $e');
-      // Fallback ke default
       _currentModelId = 'llama-3.3-70b-versatile';
       _currentMode = 'groq';
     }
   }
 
-  /// Internal method untuk set model tanpa menyimpan ke storage (untuk sync)
   Future<bool> _setModelInternal(String mode, {String? path}) async {
     try {
       final resp = await _dio.post(
@@ -355,12 +311,10 @@ class ChatService {
       );
       return resp.data['success'] == true;
     } catch (e) {
-      print('❌ Internal set model failed: $e');
       return false;
     }
   }
 
-  /// Set model dan simpan ke storage
   Future<bool> setModel(String mode, {String? path}) async {
     try {
       final resp = await _dio.post(
@@ -370,48 +324,35 @@ class ChatService {
       );
       
       if (resp.data['success'] == true) {
-        // Simpan ke memory
         _currentModelId = path;
         _currentMode = mode;
         
-        // Simpan ke storage
         if (path != null) {
           await ModelPreferenceStorage.saveSelectedModel(path);
         }
         await ModelPreferenceStorage.saveSelectedMode(mode);
         
-        print('✅ Model changed successfully: mode=$mode, model=$path');
         onModelChanged?.call(path);
         return true;
       }
       return false;
     } catch (e) {
-      print('❌ Set model failed: $e');
       return false;
     }
   }
 
-  /// Get current active model
   Future<String?> getCurrentModel() async {
     if (_currentModelId != null) return _currentModelId;
-    
-    // Coba sync dari backend
     await _syncModelFromBackend();
     return _currentModelId;
   }
 
-  /// Get current mode
   Future<String?> getCurrentMode() async {
     if (_currentMode != null) return _currentMode;
     await _syncModelFromBackend();
     return _currentMode;
   }
 
-  // -------------------------------------------------------------------------
-  // RAG Mode Management
-  // -------------------------------------------------------------------------
-
-  /// Mendapatkan mode RAG yang sedang aktif dari backend
   Future<String> getRagMode() async {
     try {
       final res = await _dio.get(
@@ -419,17 +360,14 @@ class ChatService {
         options: Options(headers: _authHeader),
       );
       if (res.data['success'] == true) {
-        final mode = res.data['data']['mode'] as String;
-        return mode;
+        return res.data['data']['mode'] as String;
       }
       return 'improved';
     } catch (e) {
-      print('❌ Error getting RAG mode: $e');
       return 'improved';
     }
   }
 
-  /// Mengganti mode RAG
   Future<bool> setRagMode(String mode) async {
     try {
       final res = await _dio.post(
@@ -438,44 +376,27 @@ class ChatService {
         options: Options(headers: _authHeader),
       );
       if (res.data['success'] == true) {
-        // Gunakan RAGPreferenceStorage dari token_storage.dart
         await RAGPreferenceStorage.saveRagMode(mode);
-        print('✅ RAG mode changed to: $mode');
         return true;
       }
       return false;
     } catch (e) {
-      print('❌ Set RAG mode failed: $e');
       return false;
     }
   }
 
-  /// Initialize RAG mode preference (panggil setelah login)
   Future<void> initRagMode() async {
     try {
-      // Coba ambil dari storage dulu menggunakan RAGPreferenceStorage
       String? savedMode = await RAGPreferenceStorage.getSavedRagMode();
-      
       if (savedMode != null) {
-        // Sync ke backend
         await setRagMode(savedMode);
       } else {
-        // Ambil dari backend
         final currentMode = await getRagMode();
         await RAGPreferenceStorage.saveRagMode(currentMode);
       }
-    } catch (e) {
-      print('⚠️ Error initializing RAG mode: $e');
-    }
+    } catch (e) {}
   }
 
-  // -------------------------------------------------------------------------
-  // Auth Methods
-  // -------------------------------------------------------------------------
-
-  /// Inisialisasi auth saat app pertama kali dibuka.
-  /// Membaca token dari storage (localStorage di web, EncryptedSharedPrefs di Android).
-  /// Return true jika token ditemukan dan valid — langsung masuk ke home.
   Future<bool> initAuth() async {
     try {
       _accessToken = await TokenStorage.read(key: 'access_token');
@@ -490,8 +411,6 @@ class ChatService {
     return true;
   }
 
-  /// Simpan token setelah login berhasil.
-  /// Dipanggil dari auth service / login handler setelah response login diterima.
   Future<void> saveAuthData({
     required String accessToken,
     required String refreshToken,
@@ -509,31 +428,20 @@ class ChatService {
     _accessToken = accessToken;
     _userId = userId;
     _startTokenTimer();
-    
-    // Setelah login, sync model preference
     await initModelPreference();
   }
 
   void _startTokenTimer() {
     _tokenTimer?.cancel();
-    print('🔄 Starting token refresh timer with interval: ${_kTokenRefreshInterval.inMinutes} minutes');
     _tokenTimer = Timer.periodic(_kTokenRefreshInterval, (_) => _silentRefresh());
   }
 
-  /// Silent refresh token setiap interval.
-  /// Membaca refresh_token dari storage, kirim ke backend, simpan token baru.
-  /// Jika refresh_token tidak ada atau expired → force logout.
   Future<void> _silentRefresh() async {
-    print('🔄 [${DateTime.now()}] Running silent refresh...');
-    
     final rt = await TokenStorage.read(key: 'refresh_token');
     if (rt == null || rt.isEmpty) {
-      print('❌ [${DateTime.now()}] No refresh token found, forcing logout');
       _forceLogout();
       return;
     }
-    
-    print('📝 [${DateTime.now()}] Refresh token found, attempting to refresh...');
     
     try {
       final res = await _dio.post('/users/refresh-token', 
@@ -556,30 +464,18 @@ class ChatService {
         
         _accessToken = newAccessToken;
         onTokenUpdated?.call(_accessToken);
-        
-        print('✅ [${DateTime.now()}] Token refreshed successfully!');
       } else {
-        print('❌ [${DateTime.now()}] Refresh failed with status: ${res.statusCode}');
-        
         if (res.statusCode == 401 || res.statusCode == 403) {
-          print('⚠️ Token expired or invalid, forcing logout');
           _forceLogout();
         }
       }
     } on DioException catch (e) {
-      print('❌ [${DateTime.now()}] DioException during refresh: ${e.message}');
-      
       if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
-        print('⚠️ Token expired or invalid, forcing logout');
         _forceLogout();
       }
-    } catch (e) {
-      print('❌ [${DateTime.now()}] Unexpected error during refresh: $e');
-    }
+    } catch (_) {}
   }
 
-  /// Force logout tanpa memanggil API — hanya bersihkan state lokal.
-  /// Dipanggil saat token expired atau refresh gagal.
   void _forceLogout() {
     _tokenTimer?.cancel();
     _accessToken = null;
@@ -589,12 +485,10 @@ class ChatService {
     onForceLogout?.call();
   }
 
-  /// Force logout + hapus semua data dari storage.
-  /// Dipanggil saat ada error auth yang tidak bisa di-recover.
   Future<void> forceLogout() async {
     _tokenTimer?.cancel();
     await TokenStorage.deleteAll();
-    await ModelPreferenceStorage.clearModelPreference(); // ← hapus juga model preference
+    await ModelPreferenceStorage.clearModelPreference(); 
     _accessToken = null;
     _userId = null;
     _currentModelId = null;
@@ -603,17 +497,12 @@ class ChatService {
     playingTtsId.value = null;
   }
 
-  /// Logout normal — panggil API logout dulu, lalu bersihkan storage.
   Future<void> logout() async {
     try {
       await _dio.post('/users/logout', options: Options(headers: _authHeader));
     } catch (_) {}
     await forceLogout();
   }
-
-  // -------------------------------------------------------------------------
-  // API Methods
-  // -------------------------------------------------------------------------
 
   Future<List<ChatTopic>> fetchTopics() async {
     try {
@@ -650,24 +539,50 @@ class ChatService {
     }
   }
 
+// ── DIPERBARUI UNTUK VISION RAG (SATU ENDPOINT) ─────────────────────────
   Future<ChatMessage?> sendMessage({
     required int? chatId,
     required String question,
+    Uint8List? imageBytes,
+    String? imageName,
   }) async {
     try {
-      final res = await _dio.post(
-        '/chat/send',
-        data: {'chat_id': chatId, 'question': question},
-        options: Options(headers: _authHeader),
-      );
+      Response res;
+      if (imageBytes != null) {
+        // Mode Vision (Kirim Multipart Data)
+        final formData = FormData.fromMap({
+          if (chatId != null) 'chat_id': chatId,
+          'question': question.isEmpty ? 'Tolong jelaskan gambar tanaman ini.' : question,
+          'file': MultipartFile.fromBytes(
+            imageBytes,
+            filename: imageName ?? 'image.jpg',
+          ),
+        });
+
+        res = await _dio.post(
+          '/chat/send', // <--- PERBAIKAN: Ubah dari /chat/vision menjadi /chat/send
+          data: formData,
+          options: Options(headers: _authHeader),
+        );
+      } else {
+        // Mode Text Biasa (Kirim JSON Raw)
+        res = await _dio.post(
+          '/chat/send',
+          data: {'chat_id': chatId, 'question': question},
+          options: Options(headers: _authHeader),
+        );
+      }
+
       final data = res.data['data'] as Map<String, dynamic>;
       return ChatMessage.pending(
         id: data['id'] as int,
         chatId: data['chat_id'] as int,
         question: data['question'] as String,
         createdAt: data['created_at'] as String,
+        localImageBytes: imageBytes, // Simpan gambar secara lokal untuk pratinjau di bubble
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error Send Message: $e');
       return null;
     }
   }
@@ -718,7 +633,6 @@ class ChatService {
       final jsonData = res.data['data'] as Map<String, dynamic>;
       return ChatMessage.fromJson(jsonData);
     } catch (e) {
-      print('❌ Error fetching message: $e');
       return null;
     }
   }
@@ -759,10 +673,6 @@ class ChatService {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Text-to-Speech (TTS) Methods
-  // -------------------------------------------------------------------------
-
   Future<void> playTTS(int detailId) async {
     try {
       await _audioPlayer.stop();
@@ -787,7 +697,6 @@ class ChatService {
       if (_currentTtsRequestDetailId == detailId) {
         playingTtsId.value = null;
       }
-      print('❌ Error playing TTS: $e');
       throw Exception('Gagal memutar audio TTS.');
     }
   }
@@ -797,18 +706,9 @@ class ChatService {
       _currentTtsRequestDetailId = null;
       await _audioPlayer.stop();
       playingTtsId.value = null;
-    } catch (e) {
-      debugPrint('Error stopping TTS: $e');
-    }
+    } catch (e) {}
   }
 
-  // -------------------------------------------------------------------------
-  // Knowledge Upload Methods
-  // -------------------------------------------------------------------------
-
-  /// Upload beberapa PDF sekaligus — satu request per file (backend tetap single).
-  /// Mengembalikan list hasil per file dalam urutan yang sama.
-  /// [onProgress] dipanggil setiap file selesai: (selesai, total).
   Future<List<Map<String, dynamic>?>> uploadPdfs({
     required List<PdfUploadFile> files,
     void Function(int done, int total)? onProgress,
@@ -852,11 +752,6 @@ class ChatService {
     return results;
   }
 
-  // -------------------------------------------------------------------------
-  // Model Selector Methods
-  // -------------------------------------------------------------------------
-
-  /// Ambil daftar model Groq yang tersedia dari backend
   Future<List<Map<String, dynamic>>> getAvailableModels() async {
     try {
       final resp = await _dio.get('/models', options: Options(headers: _authHeader));
@@ -868,12 +763,10 @@ class ChatService {
       }
       return [];
     } catch (e) {
-      print('❌ Error getting available models: $e');
       return [];
     }
   }
 
-  /// Get active model dari backend (untuk fallback)
   Future<Map<String, dynamic>?> getActiveModelFromBackend() async {
     try {
       final res = await _dio.get(
@@ -888,19 +781,13 @@ class ChatService {
       }
       return null;
     } catch (e) {
-      print('❌ Error getting active model: $e');
       return null;
     }
   }
 
-  /// Alias untuk kompatibilitas dengan kode lama yang memanggil getLocalModels
   Future<List<Map<String, dynamic>>> getLocalModels() async {
     return getAvailableModels();
   }
-
-  // -------------------------------------------------------------------------
-  // SSE Methods
-  // -------------------------------------------------------------------------
 
   Stream<SseEvent> subscribeToStream(int detailId) {
     final url = '$_kBaseUrl/chat/stream/$detailId';
@@ -914,10 +801,6 @@ class ChatService {
   }
 }
 
-// ---------------------------------------------------------------------------
-// SSE Tracker (Helper untuk UI)
-// ---------------------------------------------------------------------------
-
 class SseTracker {
   final int detailId;
   StreamSubscription<SseEvent>? sseSub;
@@ -930,17 +813,12 @@ class SseTracker {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Model untuk Multi-file Upload
-// ---------------------------------------------------------------------------
-
 class PdfUploadFile {
   final Uint8List bytes;
   final String name;
   final String? judul;
   final String? penulis;
   final String? tahun;
-  /// 'improved' (default) atau 'raw'
   final String embedderType;
 
   const PdfUploadFile({

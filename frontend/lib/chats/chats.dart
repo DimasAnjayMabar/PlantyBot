@@ -11,6 +11,7 @@ import 'package:frontend/chats/service_chats.dart';
 import 'package:frontend/chats/sidebar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 // ---------------------------------------------------------------------------
 // Greetings
 // ---------------------------------------------------------------------------
@@ -31,15 +32,10 @@ const _kGreetings = [
 
 bool _isMobileDevice(BuildContext context) {
   final width = MediaQuery.of(context).size.width;
-  // Web mobile atau aplikasi mobile (lebar < 768)
   return width < 768 ||
       (!kIsWeb &&
           (defaultTargetPlatform == TargetPlatform.android ||
               defaultTargetPlatform == TargetPlatform.iOS));
-}
-
-bool _isDesktopDevice(BuildContext context) {
-  return !_isMobileDevice(context);
 }
 
 // ---------------------------------------------------------------------------
@@ -57,7 +53,7 @@ class _ChatsPageState extends State<ChatsPage>
     with SingleTickerProviderStateMixin {
   late final ChatService _chatService;
 
-  bool _sidebarOpen = false; // akan di-set ulang di didChangeDependencies
+  bool _sidebarOpen = false; 
   bool _sidebarInitialized = false;
   late final AnimationController _sidebarCtrl;
   late final Animation<double> _sidebarAnim;
@@ -72,6 +68,7 @@ class _ChatsPageState extends State<ChatsPage>
 
   bool _sending = false;
   String? _pendingQuestion;
+  Uint8List? _pendingImageBytes; // <--- STATE GAMBAR
 
   final Map<int, SseTracker> _trackers = {};
 
@@ -112,11 +109,10 @@ class _ChatsPageState extends State<ChatsPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Set sidebar open state hanya sekali saat pertama kali build
     if (!_sidebarInitialized) {
       _sidebarInitialized = true;
       final isMobile = MediaQuery.of(context).size.width < 768;
-      _sidebarOpen = !isMobile; // mobile: tutup, desktop: buka
+      _sidebarOpen = !isMobile; 
       if (_sidebarOpen) {
         _sidebarCtrl.value = 1.0;
       } else {
@@ -146,7 +142,6 @@ class _ChatsPageState extends State<ChatsPage>
     }
     await _chatService.initModelPreference();
 
-    final currentModel = await _chatService.getCurrentModel();
     await Future.wait([_fetchTopics(), _fetchProfile()]);
     _pickGreeting();
   }
@@ -240,6 +235,12 @@ class _ChatsPageState extends State<ChatsPage>
     if (!mounted) return;
     final idx = _messages.indexWhere((m) => m.id == updated.id);
     if (idx != -1) {
+      // Pertahankan gambar lokal agar tidak hilang
+      final currentLocalImg = _messages[idx].localImageBytes;
+      if (currentLocalImg != null) {
+        updated.localImageBytes = currentLocalImg;
+      }
+
       setState(() => _messages[idx] = updated);
       _scrollToBottom();
     }
@@ -318,6 +319,7 @@ class _ChatsPageState extends State<ChatsPage>
       _activeChatId = null;
       _messages = [];
       _pendingQuestion = null;
+      _pendingImageBytes = null;
       _questionNavOpen = false;
     });
   }
@@ -328,6 +330,7 @@ class _ChatsPageState extends State<ChatsPage>
       _activeChatId = topic.id;
       _greeting = null;
       _pendingQuestion = null;
+      _pendingImageBytes = null;
       _questionNavOpen = false;
     });
     _fetchMessages(topic.id);
@@ -337,25 +340,33 @@ class _ChatsPageState extends State<ChatsPage>
   Future<void> _sendMessage({
     String? overrideText,
     int? replaceDetailId,
+    Uint8List? imageBytes,
+    String? imageName,
   }) async {
     final text = overrideText ?? _inputCtrl.text.trim();
-    if (text.isEmpty || _sending) return;
+    if ((text.isEmpty && imageBytes == null) || _sending) return;
 
     if (overrideText == null) _inputCtrl.clear();
     setState(() {
       _sending = true;
-      _pendingQuestion = replaceDetailId == null ? text : null;
+      _pendingQuestion = replaceDetailId == null 
+          ? (text.isEmpty ? 'Tolong jelaskan gambar tanaman ini.' : text) 
+          : null;
+      _pendingImageBytes = replaceDetailId == null ? imageBytes : null;
     });
     _scrollToBottom();
 
     final msg = await _chatService.sendMessage(
       chatId: _activeChatId,
       question: text,
+      imageBytes: imageBytes,
+      imageName: imageName,
     );
 
     if (msg == null) {
       setState(() {
         _pendingQuestion = null;
+        _pendingImageBytes = null;
         _sending = false;
       });
       _showSnack('Gagal mengirim pesan. Coba lagi.');
@@ -367,6 +378,7 @@ class _ChatsPageState extends State<ChatsPage>
         _activeChatId = msg.chatId;
         _greeting = null;
         _pendingQuestion = null;
+        _pendingImageBytes = null;
         _messages.add(msg);
         _sending = false;
       });
@@ -376,6 +388,7 @@ class _ChatsPageState extends State<ChatsPage>
       final idx = _messages.indexWhere((m) => m.id == replaceDetailId);
       setState(() {
         _pendingQuestion = null;
+        _pendingImageBytes = null;
         if (idx != -1) {
           _messages[idx] = msg;
         } else {
@@ -387,6 +400,7 @@ class _ChatsPageState extends State<ChatsPage>
     } else {
       setState(() {
         _pendingQuestion = null;
+        _pendingImageBytes = null;
         _messages.add(msg);
         _sending = false;
       });
@@ -510,7 +524,11 @@ class _ChatsPageState extends State<ChatsPage>
   }
 
   Future<void> _resendMessage(ChatMessage msg) async {
-    await _sendMessage(overrideText: msg.question, replaceDetailId: msg.id);
+    await _sendMessage(
+      overrideText: msg.question, 
+      replaceDetailId: msg.id,
+      imageBytes: msg.localImageBytes, // Kirim ulang gambar jika putus koneksi
+    );
   }
 
   Future<void> _deleteTopic(ChatTopic topic) async {
@@ -523,6 +541,7 @@ class _ChatsPageState extends State<ChatsPage>
           _activeChatId = null;
           _messages = [];
           _pendingQuestion = null;
+          _pendingImageBytes = null;
           _pickGreeting();
         }
       });
@@ -604,7 +623,6 @@ class _ChatsPageState extends State<ChatsPage>
         : null;
     final isMobile = MediaQuery.of(context).size.width < 768;
 
-    // Widget konten utama (topbar + body + input)
     final mainContent = Column(
       children: [
         _ChatTopBar(
@@ -626,7 +644,10 @@ class _ChatsPageState extends State<ChatsPage>
           controller: _inputCtrl,
           focusNode: _inputFocus,
           sending: _sending,
-          onSend: () => _sendMessage(),
+          onSend: ({Uint8List? imageBytes, String? imageName}) => _sendMessage(
+            imageBytes: imageBytes,
+            imageName: imageName,
+          ),
           onUploadPdfs: _uploadPdfs,
           onSetModel: (mode, {path}) => _chatService.setModel(mode, path: path),
           onGetModels: () => _chatService.getLocalModels(),
@@ -664,20 +685,14 @@ class _ChatsPageState extends State<ChatsPage>
     return Scaffold(
       backgroundColor: const Color(0xFF020202),
       body: isMobile
-          // ── Mobile: sidebar sebagai overlay di atas konten ──────────────
           ? Stack(
               children: [
-                // Konten utama selalu full width
                 mainContent,
-
-                // Overlay gelap saat sidebar terbuka
                 if (_sidebarOpen)
                   GestureDetector(
                     onTap: _toggleSidebar,
                     child: Container(color: Colors.black54),
                   ),
-
-                // Sidebar geser dari kiri
                 AnimatedBuilder(
                   animation: _sidebarAnim,
                   builder: (context, child) {
@@ -697,7 +712,6 @@ class _ChatsPageState extends State<ChatsPage>
                 ),
               ],
             )
-          // ── Desktop: sidebar di samping konten ──────────────────────────
           : Row(
               children: [
                 SizeTransition(
@@ -731,7 +745,6 @@ class _ChatsPageState extends State<ChatsPage>
       );
     }
 
-    final isMobile = _isMobileDevice(context);
     final itemCount = _messages.length + (_pendingQuestion != null ? 1 : 0);
 
     return Stack(
@@ -742,17 +755,22 @@ class _ChatsPageState extends State<ChatsPage>
           itemCount: itemCount,
           itemBuilder: (_, i) {
             if (_pendingQuestion != null && i == _messages.length) {
-              return PendingBubble(question: _pendingQuestion!);
+              return PendingBubble(
+                question: _pendingQuestion!,
+                imageBytes: _pendingImageBytes,
+              );
             }
 
             final msg = _messages[i];
-            // Assign GlobalKey ke setiap message item
             final itemKey = _messageKeys.putIfAbsent(msg.id, () => GlobalKey());
 
             if (msg.isPending) {
               return KeyedSubtree(
                 key: itemKey,
-                child: PendingBubble(question: msg.question),
+                child: PendingBubble(
+                  question: msg.question,
+                  imageBytes: msg.localImageBytes,
+                ),
               );
             }
 
@@ -760,14 +778,37 @@ class _ChatsPageState extends State<ChatsPage>
               return KeyedSubtree(
                 key: itemKey,
                 child: DisconnectedBubble(
-                  question: msg.question,
+                  message: msg,
                   onResend: () => _resendMessage(msg),
                 ),
               );
             }
 
-            // Semua status selain pending dan disconnected (done, stopped, failed)
-            // akan menggunakan MessagePair yang sudah menangani error bubble
+            if (msg.isStopped) {
+              return KeyedSubtree(
+                key: itemKey,
+                child: ValueListenableBuilder<int?>(
+                  valueListenable: _chatService.playingTtsId,
+                  builder: (context, playingId, _) {
+                    final isPlaying = playingId == msg.id;
+                    return StoppedBubble(
+                      response: msg.response,
+                      onRegenerate: () => _regenerateResponse(msg),
+                      onCopyAnswer: () => _copyText(msg.response),
+                      isPlayingTts: isPlaying,
+                      onToggleTTS: () {
+                        if (isPlaying) {
+                          _stopTTS();
+                        } else {
+                          _playTTS(msg);
+                        }
+                      },
+                    );
+                  },
+                ),
+              );
+            }
+
             return KeyedSubtree(
               key: itemKey,
               child: ValueListenableBuilder<int?>(
@@ -946,7 +987,6 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
       bottom: 0,
       child: Stack(
         children: [
-          // ── Barrier: tap di luar panel menutup navigator ──────────────
           if (_panelVisible)
             Positioned.fill(
               child: GestureDetector(
@@ -954,8 +994,6 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
                 behavior: HitTestBehavior.translucent,
               ),
             ),
-
-          // ── Strip + Panel ─────────────────────────────────────────────
           Positioned(
             left: 0,
             top: 0,
@@ -964,7 +1002,6 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Strip Toggle Button
                 GestureDetector(
                   onTap: widget.onToggle,
                   child: AnimatedContainer(
@@ -1019,7 +1056,6 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
                   ),
                 ),
 
-                // Panel daftar pertanyaan
                 SizeTransition(
                   sizeFactor: _panelAnim,
                   axis: Axis.horizontal,
@@ -1043,7 +1079,6 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
                       ),
                       child: Column(
                         children: [
-                          // Header
                           Padding(
                             padding: const EdgeInsets.fromLTRB(12, 10, 8, 6),
                             child: Row(
@@ -1076,7 +1111,6 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
                           ),
                           const Divider(height: 1, color: Color(0xFF1A1A1A)),
 
-                          // List pertanyaan — hybrid height
                           if (_visibleMessages.length > 3)
                             Expanded(
                               child: Scrollbar(
@@ -1098,7 +1132,6 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
                               itemBuilder: (_, i) => _buildItem(i),
                             ),
 
-                          // Pagination controls
                           if (_totalPages > 1) ...[
                             const Divider(height: 1, color: Color(0xFF1A1A1A)),
                             Padding(

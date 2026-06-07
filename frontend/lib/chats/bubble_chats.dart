@@ -1,4 +1,5 @@
 // lib/chats/bubble_chats.dart
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -37,8 +38,9 @@ class AiAvatar extends StatelessWidget {
 }
 
 class UserBubble extends StatelessWidget {
-  const UserBubble({super.key, required this.text});
+  const UserBubble({super.key, required this.text, this.imageBytes});
   final String text;
+  final Uint8List? imageBytes; // <--- DITAMBAHKAN UNTUK GAMBAR
 
   @override
   Widget build(BuildContext context) {
@@ -59,15 +61,35 @@ class UserBubble extends StatelessWidget {
           ),
           border: Border.all(color: const Color(0xFF16DB65).withOpacity(0.25)),
         ),
-        child: SelectionArea(
-          child: Text(
-            text,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.white,
-              height: 1.6,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (imageBytes != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 250),
+                    child: Image.memory(
+                      imageBytes!,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            SelectionArea(
+              child: Text(
+                text,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.white,
+                  height: 1.6,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -87,7 +109,14 @@ class AiBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AiAvatar(),
+        if (isError)
+          Container(
+            width: 30, height: 30,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0x33FF4444), border: Border.all(color: const Color(0xFFFF4444).withOpacity(0.4))),
+            child: const Icon(Icons.error_outline_rounded, color: Color(0xFFFF4444), size: 15),
+          )
+        else
+          const AiAvatar(),
         const SizedBox(width: 10),
         Expanded(
           child: Container(
@@ -132,10 +161,6 @@ class AiBubble extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Markdown StyleSheet helper
-// ---------------------------------------------------------------------------
 
 MarkdownStyleSheet _markdownStyleSheet() {
   return MarkdownStyleSheet(
@@ -208,10 +233,6 @@ MarkdownStyleSheet _markdownStyleSheet() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Action Chip
-// ---------------------------------------------------------------------------
-
 class ActionChip extends StatelessWidget {
   const ActionChip({
     super.key,
@@ -270,10 +291,6 @@ class ActionChip extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Answer Actions
-// ---------------------------------------------------------------------------
-
 class AnswerActions extends StatelessWidget {
   const AnswerActions({
     super.key,
@@ -316,13 +333,10 @@ class AnswerActions extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Pending Bubble
-// ---------------------------------------------------------------------------
-
 class PendingBubble extends StatefulWidget {
-  const PendingBubble({super.key, required this.question});
+  const PendingBubble({super.key, required this.question, this.imageBytes});
   final String question;
+  final Uint8List? imageBytes;
 
   @override
   State<PendingBubble> createState() => _PendingBubbleState();
@@ -356,7 +370,7 @@ class _PendingBubbleState extends State<PendingBubble>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          UserBubble(text: widget.question),
+          UserBubble(text: widget.question, imageBytes: widget.imageBytes),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,17 +421,13 @@ class _PendingBubbleState extends State<PendingBubble>
   }
 }
 
-// ---------------------------------------------------------------------------
-// Disconnected Bubble
-// ---------------------------------------------------------------------------
-
 class DisconnectedBubble extends StatelessWidget {
   const DisconnectedBubble({
     super.key,
-    required this.question,
+    required this.message,
     required this.onResend,
   });
-  final String question;
+  final ChatMessage message;
   final VoidCallback onResend;
 
   @override
@@ -427,7 +437,7 @@ class DisconnectedBubble extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          UserBubble(text: question),
+          UserBubble(text: message.question, imageBytes: message.localImageBytes),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -526,10 +536,6 @@ class DisconnectedBubble extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Stopped Bubble
-// ---------------------------------------------------------------------------
-
 class StoppedBubble extends StatelessWidget {
   const StoppedBubble({
     super.key,
@@ -625,10 +631,6 @@ class StoppedBubble extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Message Pair
-// ---------------------------------------------------------------------------
 
 class MessagePair extends StatefulWidget {
   const MessagePair({
@@ -808,11 +810,10 @@ class _MessagePairState extends State<MessagePair> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User bubble dengan action buttons
           if (isMobile)
             GestureDetector(
               onLongPress: () => _showQuestionActions(context),
-              child: UserBubble(text: msg.question),
+              child: UserBubble(text: msg.question, imageBytes: msg.localImageBytes),
             )
           else
             MouseRegion(
@@ -821,7 +822,7 @@ class _MessagePairState extends State<MessagePair> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  UserBubble(text: msg.question),
+                  UserBubble(text: msg.question, imageBytes: msg.localImageBytes),
                   AnimatedOpacity(
                     opacity: _hovered && !msg.isStopped ? 1.0 : 0.0,
                     duration: const Duration(milliseconds: 150),
@@ -864,17 +865,14 @@ class _MessagePairState extends State<MessagePair> {
 
           const SizedBox(height: 12),
 
-          // AI response area
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Gunakan AiBubble dengan flag error
               AiBubble(
                 text: msg.response,
                 isError: isError,
               ),
               const SizedBox(height: 8),
-              // Tampilkan action buttons meskipun error (agar bisa regenerate)
               AnswerActions(
                 onRegenerate: widget.onRegenerate,
                 onCopy: widget.onCopyAnswer,

@@ -1,5 +1,6 @@
 // lib/chats/input_bar.dart
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:frontend/chats/service_chats.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:image_picker/image_picker.dart';
 
 // ---------------------------------------------------------------------------
 // Intents untuk Shortcuts
@@ -40,7 +42,7 @@ class InputBar extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool sending;
-  final VoidCallback onSend;
+  final void Function({Uint8List? imageBytes, String? imageName}) onSend;
   final Future<void> Function(
     List<PdfUploadFile> files, {
     void Function(int done, int total)? onProgress,
@@ -65,8 +67,13 @@ class _InputBarState extends State<InputBar> {
   String _activeModelId = 'llama-3.3-70b-versatile';
   bool _modelSwitching = false;
 
-  String _ragMode = 'improved';  // 'improved' atau 'regular'
+  String _ragMode = 'improved';  
   bool _ragModeSwitching = false;
+
+  // Image Picker State
+  Uint8List? _selectedImageBytes;
+  String? _selectedImageName;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -141,7 +148,34 @@ class _InputBarState extends State<InputBar> {
     if (mounted) setState(() => _isListening = false);
   }
 
-  // ── Dialog untuk memilih RAG mode ────────────────────────────────────────
+  // Pick Image Logic
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _selectedImageBytes = bytes;
+          _selectedImageName = image.name;
+        });
+      }
+    } catch (e) {
+      debugPrint('Image picker error: $e');
+    }
+  }
+
+  void _triggerSend() {
+    widget.onSend(
+      imageBytes: _selectedImageBytes, 
+      imageName: _selectedImageName
+    );
+    setState(() {
+      _selectedImageBytes = null;
+      _selectedImageName = null;
+    });
+  }
+
+  // ── Dialog RAG Mode ────────────────────────────────────────
   void _showRagModeDialog(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
     String selectedMode = _ragMode;
@@ -208,7 +242,6 @@ class _InputBarState extends State<InputBar> {
                 ),
                 const SizedBox(height: 16),
                 
-                // ── Improved RAG option ─────────────────────────────────────
                 _buildRagModeOption(
                   mode: 'improved',
                   title: 'Improved RAG',
@@ -219,7 +252,6 @@ class _InputBarState extends State<InputBar> {
                 ),
                 const SizedBox(height: 8),
                 
-                // ── Regular RAG option ──────────────────────────────────────
                 _buildRagModeOption(
                   mode: 'regular',
                   title: 'Regular RAG',
@@ -775,7 +807,7 @@ class _InputBarState extends State<InputBar> {
     List<PdfUploadFile> _selectedFiles = [];
     bool _isUploading = false;
     int _uploadDone = 0;
-    String _embedderType = 'improved'; // 'improved' atau 'raw'
+    String _embedderType = 'improved'; 
 
     showDialog(
       context: context,
@@ -822,7 +854,6 @@ class _InputBarState extends State<InputBar> {
               _uploadDone = 0;
             });
 
-            // Rebuild list dengan embedderType terbaru sebelum upload
             final filesToUpload = _selectedFiles
                 .map((f) => PdfUploadFile(
                       bytes: f.bytes,
@@ -1125,16 +1156,6 @@ class _InputBarState extends State<InputBar> {
                                     : const Color(0xFF888888),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              kIsWeb
-                                  ? 'Tahan Ctrl untuk pilih beberapa file'
-                                  : 'Hanya file .pdf yang didukung',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: const Color(0xFF555555),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -1334,15 +1355,21 @@ class _InputBarState extends State<InputBar> {
               ragModeSwitching: _ragModeSwitching,
               ragMode: _ragMode,
               activeModelId: _activeModelId,
+              selectedImageBytes: _selectedImageBytes, // Pass Image Bytes
               controller: widget.controller,
               focusNode: widget.focusNode,
-              onSend: widget.onSend,
+              onSend: _triggerSend,
               onStop: widget.onStop,
               onStartListening: _startListening,
               onStopListening: _stopListening,
               onShowModelDialog: _showModelDialog,
               onShowUploadDialog: _showUploadDialog,
               onShowRagModeDialog: _showRagModeDialog,
+              onPickImage: _pickImage, // Pass Image Picker action
+              onClearImage: () => setState(() {
+                _selectedImageBytes = null;
+                _selectedImageName = null;
+              }),
             )
           : _DesktopInputLayout(
               hasText: _hasText,
@@ -1354,15 +1381,21 @@ class _InputBarState extends State<InputBar> {
               ragModeSwitching: _ragModeSwitching,
               ragMode: _ragMode,
               activeModelId: _activeModelId,
+              selectedImageBytes: _selectedImageBytes, // Pass Image Bytes
               controller: widget.controller,
               focusNode: widget.focusNode,
-              onSend: widget.onSend,
+              onSend: _triggerSend,
               onStop: widget.onStop,
               onStartListening: _startListening,
               onStopListening: _stopListening,
               onShowModelDialog: _showModelDialog,
               onShowUploadDialog: _showUploadDialog,
               onShowRagModeDialog: _showRagModeDialog,
+              onPickImage: _pickImage, // Pass Image Picker action
+              onClearImage: () => setState(() {
+                _selectedImageBytes = null;
+                _selectedImageName = null;
+              }),
             ),
     );
   }
@@ -1383,6 +1416,7 @@ class _MobileInputLayout extends StatelessWidget {
     required this.ragModeSwitching,
     required this.ragMode,
     required this.activeModelId,
+    this.selectedImageBytes,
     required this.controller,
     required this.focusNode,
     required this.onSend,
@@ -1392,6 +1426,8 @@ class _MobileInputLayout extends StatelessWidget {
     required this.onShowModelDialog,
     required this.onShowUploadDialog,
     required this.onShowRagModeDialog,
+    required this.onPickImage,
+    required this.onClearImage,
   });
 
   final bool hasText;
@@ -1403,6 +1439,7 @@ class _MobileInputLayout extends StatelessWidget {
   final bool ragModeSwitching;
   final String ragMode;
   final String activeModelId;
+  final Uint8List? selectedImageBytes;
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onSend;
@@ -1412,6 +1449,8 @@ class _MobileInputLayout extends StatelessWidget {
   final Future<void> Function(BuildContext) onShowModelDialog;
   final void Function(BuildContext) onShowUploadDialog;
   final void Function(BuildContext) onShowRagModeDialog;
+  final VoidCallback onPickImage;
+  final VoidCallback onClearImage;
 
   String _getModelShortName(String modelId) {
     if (modelId.contains('mistral')) return 'Mistral';
@@ -1425,19 +1464,57 @@ class _MobileInputLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSendDisabled = sending || !hasText || modelSwitching;
+    final isSendDisabled = sending || (!hasText && selectedImageBytes == null) || modelSwitching;
 
     return Column(
       children: [
-        // Baris pertama: Tombol RAG Mode, Model, Upload (3 tombol)
+        if (selectedImageBytes != null) ...[
+          Container(
+            alignment: Alignment.centerLeft,
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF2A2A2A)),
+              ),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      selectedImageBytes!,
+                      height: 100,
+                      width: 100,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: onClearImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.black87,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         Row(
           children: [
-            // Tombol RAG Mode
             Expanded(
               child: Tooltip(
                 message: ragMode == 'improved' 
-                    ? 'Mode: Improved (Neo4j + Context)' 
-                    : 'Mode: Regular (Simple)',
+                    ? 'Mode: Improved' 
+                    : 'Mode: Regular',
                 child: ElevatedButton(
                   onPressed: ragModeSwitching ? null : () => onShowRagModeDialog(context),
                   style: ElevatedButton.styleFrom(
@@ -1489,7 +1566,6 @@ class _MobileInputLayout extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Tombol Model
             Expanded(
               child: Tooltip(
                 message: 'Model: $activeModelId',
@@ -1538,12 +1614,11 @@ class _MobileInputLayout extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Tombol Upload
             Expanded(
               child: Tooltip(
-                message: 'Unggah PDF pengetahuan bot',
+                message: 'Pilih Gambar (Vision RAG)',
                 child: ElevatedButton(
-                  onPressed: () => onShowUploadDialog(context),
+                  onPressed: sending ? null : onPickImage,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1A1A1A),
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1556,13 +1631,13 @@ class _MobileInputLayout extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        Icons.upload_file_rounded,
+                        Icons.image_outlined,
                         color: Color(0xFF888888),
                         size: 18,
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'Upload',
+                        'Foto',
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           color: const Color(0xFF888888),
@@ -1577,7 +1652,6 @@ class _MobileInputLayout extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        // TextField (besar di tengah) - FIXED VERSION with onSubmitted
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 75, minHeight: 70),
           child: TextField(
@@ -1626,16 +1700,51 @@ class _MobileInputLayout extends StatelessWidget {
               ),
             ),
             onSubmitted: (_) {
-              if (!sending && !modelSwitching && controller.text.trim().isNotEmpty) {
+              if (!isSendDisabled) {
                 onSend();
               }
             },
           ),
         ),
         const SizedBox(height: 10),
-        // Baris kedua: Tombol Mic (kiri) dan Tombol Send (kanan)
         Row(
           children: [
+            Expanded(
+              child: Tooltip(
+                message: 'Unggah PDF pengetahuan bot',
+                child: ElevatedButton(
+                  onPressed: sending ? null : () => onShowUploadDialog(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A1A1A),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.upload_file_rounded,
+                        color: Color(0xFF888888),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Upload PDF',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF888888),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             Expanded(
               child: Tooltip(
                 message: isListening ? 'Berhenti Merekam' : 'Input Suara',
@@ -1714,7 +1823,7 @@ class _MobileInputLayout extends StatelessWidget {
                   : ElevatedButton(
                       onPressed: isSendDisabled ? null : onSend,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: hasText && !sending && !modelSwitching
+                        backgroundColor: (hasText || selectedImageBytes != null) && !sending && !modelSwitching
                             ? const Color(0xFF16DB65)
                             : const Color(0xFF1A1A1A),
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1775,6 +1884,7 @@ class _DesktopInputLayout extends StatelessWidget {
     required this.ragModeSwitching,
     required this.ragMode,
     required this.activeModelId,
+    this.selectedImageBytes,
     required this.controller,
     required this.focusNode,
     required this.onSend,
@@ -1784,6 +1894,8 @@ class _DesktopInputLayout extends StatelessWidget {
     required this.onShowModelDialog,
     required this.onShowUploadDialog,
     required this.onShowRagModeDialog,
+    required this.onPickImage,
+    required this.onClearImage,
   });
 
   final bool hasText;
@@ -1795,6 +1907,7 @@ class _DesktopInputLayout extends StatelessWidget {
   final bool ragModeSwitching;
   final String ragMode;
   final String activeModelId;
+  final Uint8List? selectedImageBytes;
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onSend;
@@ -1804,6 +1917,8 @@ class _DesktopInputLayout extends StatelessWidget {
   final Future<void> Function(BuildContext) onShowModelDialog;
   final void Function(BuildContext) onShowUploadDialog;
   final void Function(BuildContext) onShowRagModeDialog;
+  final VoidCallback onPickImage;
+  final VoidCallback onClearImage;
 
   String _getRagModeShortName(String mode) {
     return mode == 'improved' ? 'Improved' : 'Regular';
@@ -1817,246 +1932,62 @@ class _DesktopInputLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSendDisabled = sending || !hasText || modelSwitching;
+    final isSendDisabled = sending || (!hasText && selectedImageBytes == null) || modelSwitching;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Tombol Upload PDF
-        Padding(
-          padding: const EdgeInsets.only(bottom: 0),
-          child: SizedBox(
-            width: 48,
-            height: 48,
-            child: Tooltip(
-              message: 'Unggah PDF pengetahuan bot',
-              child: ElevatedButton(
-                onPressed: () => onShowUploadDialog(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A1A1A),
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Icon(
-                  Icons.upload_file_rounded,
-                  color: Color(0xFF888888),
-                  size: 20,
-                ),
-              ),
+        if (selectedImageBytes != null) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF2A2A2A)),
             ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // Tombol Pilih RAG Mode
-        SizedBox(
-          height: 48,
-          child: Tooltip(
-            message: ragMode == 'improved' 
-                ? 'Mode: Improved (Neo4j + Context)' 
-                : 'Mode: Regular (Simple)',
-            child: ElevatedButton(
-              onPressed: ragModeSwitching ? null : () => onShowRagModeDialog(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A1A1A),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                shape: RoundedRectangleBorder(
+            child: Stack(
+              children: [
+                ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: ragModeSwitching
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFFFFAA33),
-                      ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          ragMode == 'improved' 
-                              ? Icons.auto_awesome_rounded 
-                              : Icons.speed_rounded,
-                          size: 15,
-                          color: ragMode == 'improved' 
-                              ? const Color(0xFF16DB65) 
-                              : const Color(0xFFFFAA33),
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          _getRagModeShortName(ragMode),
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: ragMode == 'improved' 
-                                ? const Color(0xFF16DB65) 
-                                : const Color(0xFFFFAA33),
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // Tombol Pilih Model LLM
-        SizedBox(
-          height: 48,
-          child: Tooltip(
-            message: 'Model: $activeModelId',
-            child: ElevatedButton(
-              onPressed: modelSwitching ? null : () => onShowModelDialog(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A1A1A),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: modelSwitching
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFF16DB65),
-                      ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome_rounded,
-                          size: 15,
-                          color: Color(0xFF16DB65),
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          _getModelShortName(activeModelId),
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF16DB65),
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // TextField (desktop) - FIXED VERSION with onSubmitted
-        Expanded(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 150),
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              maxLines: null,
-              keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.send,
-              enabled: !sending && !modelSwitching,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.white,
-              ),
-              cursorColor: const Color(0xFF16DB65),
-              decoration: InputDecoration(
-                hintText: 'Ketik pertanyaan Anda...',
-                hintStyle: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: const Color(0xFFA3A3A3),
-                ),
-                filled: true,
-                fillColor: const Color(0xFF111111),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF16DB65),
-                    width: 1.5,
+                  child: Image.memory(
+                    selectedImageBytes!,
+                    height: 100,
+                    width: 100,
+                    fit: BoxFit.cover,
                   ),
                 ),
-                disabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
-                ),
-              ),
-              onSubmitted: (_) {
-                if (!sending && !modelSwitching && controller.text.trim().isNotEmpty) {
-                  onSend();
-                }
-              },
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-
-        // Tombol Mic STT
-        Padding(
-          padding: const EdgeInsets.only(bottom: 0),
-          child: SizedBox(
-            width: 48,
-            height: 48,
-            child: Tooltip(
-              message: isListening ? 'Berhenti Merekam' : 'Input Suara',
-              child: ElevatedButton(
-                onPressed: speechEnabled
-                    ? (isListening ? onStopListening : onStartListening)
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isListening
-                      ? Colors.red.shade400
-                      : const Color(0xFF1A1A1A),
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: onClearImage,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.black87,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, size: 14, color: Colors.white),
+                    ),
                   ),
-                  elevation: 0,
                 ),
-                child: Icon(
-                  isListening ? Icons.mic_off_rounded : Icons.mic_none_rounded,
-                  color: isListening ? Colors.white : const Color(0xFF888888),
-                  size: 20,
-                ),
-              ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(width: 10),
-
-        // Tombol Send / Stop
-        SizedBox(
-          width: 48,
-          height: 48,
-          child: hasPending
-              ? Tooltip(
-                  message: 'Hentikan generate',
+        ],
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 0),
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: Tooltip(
+                  message: 'Unggah PDF pengetahuan bot',
                   child: ElevatedButton(
-                    onPressed: onStop,
+                    onPressed: () => onShowUploadDialog(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF4444),
+                      backgroundColor: const Color(0xFF1A1A1A),
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -2064,39 +1995,305 @@ class _DesktopInputLayout extends StatelessWidget {
                       elevation: 0,
                     ),
                     child: const Icon(
-                      Icons.stop_rounded,
-                      color: Colors.white,
+                      Icons.upload_file_rounded,
+                      color: Color(0xFF888888),
                       size: 20,
                     ),
                   ),
-                )
-              : ElevatedButton(
-                  onPressed: isSendDisabled ? null : onSend,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            SizedBox(
+              height: 48,
+              child: Tooltip(
+                message: ragMode == 'improved' 
+                    ? 'Mode: Improved (Neo4j + Context)' 
+                    : 'Mode: Regular (Simple)',
+                child: ElevatedButton(
+                  onPressed: ragModeSwitching ? null : () => onShowRagModeDialog(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: hasText && !sending && !modelSwitching
-                        ? const Color(0xFF16DB65)
-                        : const Color(0xFF1A1A1A),
-                    padding: EdgeInsets.zero,
+                    backgroundColor: const Color(0xFF1A1A1A),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 0,
                   ),
-                  child: (sending || modelSwitching)
+                  child: ragModeSwitching
                       ? const SizedBox(
-                          width: 18,
-                          height: 18,
+                          width: 14,
+                          height: 14,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.black,
+                            color: Color(0xFFFFAA33),
                           ),
                         )
-                      : const Icon(
-                          Icons.arrow_upward_rounded,
-                          color: Colors.black,
-                          size: 20,
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              ragMode == 'improved' 
+                                  ? Icons.auto_awesome_rounded 
+                                  : Icons.speed_rounded,
+                              size: 15,
+                              color: ragMode == 'improved' 
+                                  ? const Color(0xFF16DB65) 
+                                  : const Color(0xFFFFAA33),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              _getRagModeShortName(ragMode),
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: ragMode == 'improved' 
+                                    ? const Color(0xFF16DB65) 
+                                    : const Color(0xFFFFAA33),
+                              ),
+                            ),
+                          ],
                         ),
                 ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            SizedBox(
+              height: 48,
+              child: Tooltip(
+                message: 'Model: $activeModelId',
+                child: ElevatedButton(
+                  onPressed: modelSwitching ? null : () => onShowModelDialog(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A1A1A),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: modelSwitching
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF16DB65),
+                          ),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 15,
+                              color: Color(0xFF16DB65),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              _getModelShortName(activeModelId),
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF16DB65),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            
+            Padding(
+              padding: const EdgeInsets.only(bottom: 0),
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: Tooltip(
+                  message: 'Pilih Gambar (Vision RAG)',
+                  child: ElevatedButton(
+                    onPressed: sending ? null : onPickImage,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1A1A1A),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Icon(
+                      Icons.image_outlined,
+                      color: Color(0xFF888888),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            Expanded(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 150),
+                child: Shortcuts(
+                  shortcuts: <LogicalKeySet, Intent>{
+                    LogicalKeySet(LogicalKeyboardKey.enter): const SendMessageIntent(),
+                    LogicalKeySet(LogicalKeyboardKey.numpadEnter): const SendMessageIntent(),
+                  },
+                  child: Actions(
+                    actions: <Type, Action<Intent>>{
+                      SendMessageIntent: CallbackAction<SendMessageIntent>(
+                        onInvoke: (intent) {
+                          if (!isSendDisabled) {
+                            onSend();
+                          }
+                          return null;
+                        },
+                      ),
+                    },
+                    child: TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.send,
+                      enabled: !sending && !modelSwitching,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                      cursorColor: const Color(0xFF16DB65),
+                      decoration: InputDecoration(
+                        hintText: 'Ketik pertanyaan Anda...',
+                        hintStyle: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: const Color(0xFFA3A3A3),
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFF111111),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF16DB65),
+                            width: 1.5,
+                          ),
+                        ),
+                        disabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFF1A1A1A)),
+                        ),
+                      ),
+                      onSubmitted: (_) {
+                        if (!isSendDisabled) {
+                          onSend();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            Padding(
+              padding: const EdgeInsets.only(bottom: 0),
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: Tooltip(
+                  message: isListening ? 'Berhenti Merekam' : 'Input Suara',
+                  child: ElevatedButton(
+                    onPressed: speechEnabled
+                        ? (isListening ? onStopListening : onStartListening)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isListening
+                          ? Colors.red.shade400
+                          : const Color(0xFF1A1A1A),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Icon(
+                      isListening ? Icons.mic_off_rounded : Icons.mic_none_rounded,
+                      color: isListening ? Colors.white : const Color(0xFF888888),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: hasPending
+                  ? Tooltip(
+                      message: 'Hentikan generate',
+                      child: ElevatedButton(
+                        onPressed: onStop,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF4444),
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Icon(
+                          Icons.stop_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    )
+                  : ElevatedButton(
+                      onPressed: isSendDisabled ? null : onSend,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: (hasText || selectedImageBytes != null) && !sending && !modelSwitching
+                            ? const Color(0xFF16DB65)
+                            : const Color(0xFF1A1A1A),
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: (sending || modelSwitching)
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.black,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.arrow_upward_rounded,
+                              color: Colors.black,
+                              size: 20,
+                            ),
+                    ),
+            ),
+          ],
         ),
       ],
     );

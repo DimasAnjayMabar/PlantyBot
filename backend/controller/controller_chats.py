@@ -4,6 +4,7 @@ import logging
 import io
 from gtts import gTTS
 import os
+import base64
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, status
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -167,39 +168,59 @@ def rename_topic(
 # CHAT MESSAGES
 # =============================================================================
 
-@router.post("/chat/send", status_code=status.HTTP_202_ACCEPTED)
-def send_message(
-    body: SendMessageSchema,
+@router.post("/chat/send", status_code=status.HTTP_202_ACCEPTED) # Atau sesuaikan nama endpoint awal Anda
+async def send_message(
+    request: Request,
     db: Session = Depends(get_db),
     current_session: UserAuth = Depends(get_current_session),
 ):
     """
-    Kirim pertanyaan ke AI.
-
-    Return 202 Accepted dengan detail_id + processing_status='pending'.
-    Response (jawaban AI) TIDAK ada di sini — frontend ambil via
-    GET /chat/message/{detail_id} setelah SSE memberi sinyal 'done'.
+    Satu Endpoint Untuk Semua!
+    Secara otomatis mendeteksi apakah request berupa JSON (teks saja) atau Multipart (teks + gambar).
     """
+    content_type = request.headers.get("content-type", "")
+    
+    question = ""
+    chat_id = None
+    base64_image = None
+    
+    # 1. Jika mengandung file gambar (Multipart Form-Data)
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        question = form.get("question", "")
+        chat_id_str = form.get("chat_id")
+        if chat_id_str and str(chat_id_str).lower() != "null":
+            chat_id = int(chat_id_str)
+        
+        file = form.get("file")
+        if file and hasattr(file, "read"):
+            image_bytes = await file.read()
+            if image_bytes:
+                base64_image = base64.b64encode(image_bytes).decode("utf-8")
+                
+    # 2. Jika hanya teks (JSON Raw)
+    else:
+        body = await request.json()
+        question = body.get("question", "")
+        chat_id = body.get("chat_id")
+        
     try:
+        # Kirimkan semuanya ke satu service
         detail = ChatService.send_message(
-            db,
-            current_session.user_id,
-            body.chat_id,
-            body.question,
+            db=db,
+            user_id=current_session.user_id,
+            chat_id=chat_id,
+            question=question,
             db_factory=SessionLocal,
+            base64_image=base64_image # Gambar diteruskan jika ada
         )
+        
         return JSONResponse(
             status_code=status.HTTP_202_ACCEPTED,
             content={
                 "success": True,
                 "message": "Pertanyaan diterima, sedang diproses.",
-                "data": {
-                    "id":                detail.id,
-                    "chat_id":           detail.chat_id,
-                    "question":          detail.question,
-                    "processing_status": detail.processing_status,
-                    "created_at":        detail.created_at.isoformat(),
-                },
+                "data": _serialize_detail(detail)
             },
         )
     except HTTPException as e:

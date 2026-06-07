@@ -111,34 +111,33 @@ def _call_llm(
     question: str,
     chat_id: int,
     user_id: int | None = None,
-    stop_event: threading.Event = None,      # ← baru
+    stop_event: threading.Event = None,
+    base64_image: str | None = None, # <--- TAMBAHAN
 ) -> dict:
     start    = time.time()
     pipeline = get_rag_pipeline()
-
     full_response = ""
-    rag_response  = pipeline.process_query(
-        question,
+    
+    # Cukup panggil process_query, pipeline yang akan mengurus pemisahan/penggabungan
+    rag_response = pipeline.process_query(
+        query=question,
         chat_id=chat_id,
         user_id=user_id,
-        stop_event=stop_event,               # ← diteruskan ke pipeline
+        stop_event=stop_event,
+        base64_image=base64_image # <--- DITERUSKAN
     )
-
+    
     for token in rag_response.answer:
-        # Cek stop setiap token — hentikan iterasi jika sudah di-set
         if stop_event is not None and stop_event.is_set():
-            logger.info(f"[_call_llm] Stop event saat iterasi token — chat_id={chat_id}")
             break
         full_response += token
-
-    latency_ms = int((time.time() - start) * 1000)
 
     return {
         "response":      full_response,
         "input_tokens":  len(question.split()),
         "output_tokens": len(full_response.split()),
         "total_cost":    0.0,
-        "latency_ms":    latency_ms,
+        "latency_ms":    int((time.time() - start) * 1000),
     }
 
 
@@ -175,18 +174,17 @@ def _invoke_llm_safe(
     chat_id: int,
     context: str,
     user_id: int | None = None,
-    stop_event: threading.Event = None,      # ← baru
+    stop_event: threading.Event = None,
+    base64_image: str | None = None, # <--- TAMBAHAN
 ) -> tuple[dict, str, str | None]:
     try:
         result = _call_llm(
-            question,
-            chat_id=chat_id,
-            user_id=user_id,
-            stop_event=stop_event,           # ← diteruskan
+            question, chat_id=chat_id, user_id=user_id, 
+            stop_event=stop_event, base64_image=base64_image # <--- DITERUSKAN
         )
         return result, "success", None
     except Exception as exc:
-        logger.error(f"LLM call failed — {context}: {exc}")
+        logger.error(f"LLM call failed: {exc}")
         return {
             "response":      "Maaf, terjadi kesalahan saat memproses pertanyaan Anda.",
             "input_tokens":  0,
@@ -285,12 +283,10 @@ def _rag_worker(
     db_factory,
     user_id: int,
     is_edit: bool = False,
+    base64_image: str | None = None, # <--- TAMBAHAN
 ) -> None:
     db: Session = db_factory()
-
-    # Ambil atau buat stop event untuk detail_id ini
     stop_event = _get_stop_event(detail_id)
-
     try:
         from models import User
         user      = db.query(User).filter(User.id == user_id).first()
@@ -301,34 +297,26 @@ def _rag_worker(
                 pipeline_obj = get_rag_pipeline()
                 pipeline_obj.save_identity(user_id, user_name)
             except Exception as exc:
-                logger.warning(f"[Identity] Gagal simpan identity user_id={user_id}: {exc}")
+                logger.warning(f"[Identity] Gagal simpan identity: {exc}")
 
-        # ── Jika is_edit/regenerate → bersihkan memory lama dulu ─────────────
         if is_edit:
             try:
                 pipeline_obj = get_rag_pipeline()
                 collection   = pipeline_obj.chroma.client.get_or_create_collection("chat_memory")
-                # Hapus summary agar tidak terkontaminasi jawaban versi sebelumnya
                 collection.delete(ids=[f"summary_{chat_id}"])
-                # Hapus recent entry untuk detail_id ini (akan di-upsert ulang)
                 collection.delete(ids=[f"recent_{chat_id}_{detail_id}"])
-                logger.info(
-                    f"[MemoryReset] Summary + recent entry dihapus sebelum regenerate "
-                    f"→ chat_id={chat_id}  detail_id={detail_id}"
-                )
             except Exception as exc:
                 logger.warning(f"[MemoryReset] Gagal hapus memory lama: {exc}")
 
-        # ── Panggil RAG pipeline — teruskan stop_event ────────────────────────
         llm_result, llm_status, error_msg = _invoke_llm_safe(
             question,
             chat_id=chat_id,
             context=f"bg_detail_id={detail_id}",
             user_id=user_id,
-            stop_event=stop_event,          # ← baru
+            stop_event=stop_event,
+            base64_image=base64_image,
         )
 
-        # ── Cek apakah dihentikan oleh user ───────────────────────────────────
         was_stopped = stop_event.is_set()
         if was_stopped:
             llm_status = "stopped"
@@ -336,10 +324,9 @@ def _rag_worker(
 
         detail = db.query(ChatDetail).filter(ChatDetail.id == detail_id).first()
         if detail is None:
-            logger.warning(f"RAG worker: detail_id={detail_id} tidak ditemukan di DB")
             return
 
-        detail.response = llm_result["response"]  # simpan partial response jika ada
+        detail.response = llm_result["response"]  
         detail.processing_status = (
             "stopped" if was_stopped
             else ("done" if llm_status == "success" else "failed")
@@ -352,23 +339,16 @@ def _rag_worker(
         _save_pipeline_log(
             db, detail_id, llm_result,
             llm_status if not was_stopped else "stopped",
-            error_msg,
-            existing_log=existing_log,
+            error_msg, existing_log=existing_log,
         )
 
         db.commit()
-        logger.info(
-            f"RAG worker selesai → detail_id={detail_id}  "
-            f"chat_id={chat_id}  status={detail.processing_status}"
-        )
-
-        # ── Spawn memory save hanya jika benar-benar selesai (bukan stopped) ──
+        
         if llm_status == "success" and not was_stopped:
             m = threading.Thread(
                 target=_save_memory_entry,
                 args=(chat_id, detail_id, question, llm_result["response"]),
                 daemon=True,
-                name=f"memory-save-{chat_id}-{detail_id}",
             )
             m.start()
 
@@ -384,7 +364,7 @@ def _rag_worker(
     finally:
         db.close()
         _cleanup_stop_event(detail_id)
-        _signal_done(detail_id)   # selalu signal SSE
+        _signal_done(detail_id)
 
 
 # =============================================================================
@@ -460,7 +440,7 @@ class ChatService:
     # -------------------------------------------------------------------------
     # MESSAGES
     # -------------------------------------------------------------------------
-
+    
     @staticmethod
     def send_message(
         db:          Session,
@@ -468,6 +448,7 @@ class ChatService:
         chat_id:     int | None,
         question:    str,
         db_factory,
+        base64_image: str | None = None,
     ) -> ChatDetail:
         """
         Kirim pertanyaan ke RAG pipeline secara async.
@@ -538,15 +519,11 @@ class ChatService:
         t = threading.Thread(
             target=_rag_worker,
             args=(detail.id, question.strip(), chat.id, db_factory, user_id),
+            kwargs={"base64_image": base64_image}, # <--- DITERUSKAN KE WORKER
             daemon=True,
             name=f"rag-worker-{detail.id}",
         )
         t.start()
-        logger.info(
-            f"Background RAG dimulai → detail_id={detail.id}  "
-            f"chat_id={chat.id}  thread={t.name}"
-        )
-
         return detail
 
     @staticmethod
