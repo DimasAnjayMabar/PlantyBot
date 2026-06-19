@@ -38,7 +38,7 @@ load_dotenv()
 ############################################################
 
 def _setup_logger() -> logging.Logger:
-    logger = logging.getLogger("agribot")
+    logger = logging.getLogger("tandurbot")
     if logger.handlers:
         return logger
 
@@ -79,7 +79,7 @@ def _setup_logger() -> logging.Logger:
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(console_fmt)
 
-    fh = logging.FileHandler("agribot.log", encoding="utf-8")
+    fh = logging.FileHandler("tandurbot.log", encoding="utf-8")
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(file_fmt)
 
@@ -948,7 +948,7 @@ class RAGPipeline:
              meski terjadi kompresi.
 
           2. Simpan entry episodik baru (id 'recent_{chat_id}_{detail_id}').
-             Format teks: "User: ...\nAgribot: ..."
+             Format teks: "User: ...\nTandurBot: ..."
              Metadata: chat_id, detail_id, timestamp, type='recent'
              Dipakai oleh get_memory() sebagai recent window kronologis.
 
@@ -1074,7 +1074,7 @@ class RAGPipeline:
             # ══════════════════════════════════════════════════════════════════
             recent_doc = (
                 f"User: {question.strip()}\n"
-                f"Agribot: {answer.strip()}"
+                f"TandurBot: {answer.strip()}"
             )
             recent_embedding = self.models.get_embedding(recent_doc)
             collection.upsert(
@@ -1413,7 +1413,7 @@ class RAGPipeline:
             log.error(f"[Vision] Gagal memuat gambar: {e}")
             raise ValueError("Data gambar tidak valid atau korup.")
 
-        prompt = f"Sebagai pakar pertanian (AgriBot), tolong analisis gambar ini secara detail.\n\nKonteks/Pertanyaan pengguna: {query}"
+        prompt = f"Sebagai pakar pertanian (TandurBot), tolong analisis gambar ini secara detail.\n\nKonteks/Pertanyaan pengguna: {query}"
 
         def stream_generator():
             try:

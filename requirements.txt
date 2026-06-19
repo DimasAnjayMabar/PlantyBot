@@ -13,6 +13,11 @@ uvicorn
 fastapi
 pydantic
 alembic
-passlib
+passlib==1.7.4
 pymysql
+google.generativeai
+gtts
 'pydantic[email]'
+bcrypt==4.1.3
+matplotlib
+seaborn

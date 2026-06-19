@@ -7,3 +7,4 @@ supabase_password.txt
 output
 __pycache__
 agribot.log
+json_visualization.json

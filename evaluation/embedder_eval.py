@@ -215,19 +215,19 @@ class EmbedderEvaluator:
             vals = [g.get(metric_key, 0), r.get(metric_key, 0)]
             bars_ = ax.bar(['Graph', 'Raw'], vals,
                            color=[GREEN, RED], edgecolor='black', alpha=0.85)
-            ax.set_ylabel(ylabel, fontsize=9)
+            ax.set_ylabel(ylabel, fontsize=10)
             ax.set_title(title, fontsize=11, weight='bold')
             ax.set_ylim(0, max(max(vals) * 1.2, 1))
             ax.grid(axis='y', alpha=0.3)
             for bar_, val_ in zip(bars_, vals):
                 ax.text(bar_.get_x() + bar_.get_width() / 2,
                         bar_.get_height() + max(vals) * 0.03,
-                        f'{val_:.2f}', ha='center', fontsize=9, weight='bold')
+                        f'{val_:.2f}', ha='center', fontsize=10, weight='bold')
             pct = imp.get(imp_key, 0)
             ax.text(0.5, -0.18,
                     f"Improvement: +{pct:.1f}%",
                     transform=ax.transAxes, ha='center',
-                    fontsize=9, color='darkgreen', weight='bold')
+                    fontsize=10, color='darkgreen', weight='bold')
 
         fig.suptitle("Graph Enrichment vs Raw Embedder", fontsize=15, weight='bold')
 

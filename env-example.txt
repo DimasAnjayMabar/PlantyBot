@@ -1,0 +1,7 @@
+GROQ_API_KEY = "your groq key"
+DATABASE_URL = "your database url"
+MAIL_HOST= your mail host
+MAIL_PORT=587
+MAIL_USERNAME= your mail server username
+MAIL_PASSWORD= your mail server password
+MAIL_FROM= your main email (ex: noreply@gmail.com)

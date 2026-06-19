@@ -886,11 +886,14 @@ class _InputBarState extends State<InputBar> {
               side: const BorderSide(color: Color(0xFF1A1A1A)),
             ),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize: MainAxisSize.max,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -1188,10 +1191,9 @@ class _InputBarState extends State<InputBar> {
                           ),
                         ),
                       ],
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 200),
+                      Flexible(
                         child: ListView.separated(
-                          shrinkWrap: true,
+                          shrinkWrap: false,
                           itemCount: _selectedFiles.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 6),
                           itemBuilder: (_, i) {

@@ -1,15 +1,3 @@
-#!/usr/bin/env python3
-"""
-Graph DB: Neo4j | Vector DB: ChromaDB
-Structure:
-  Neo4j  -> Node Jurnal + Node Isi + Relasi HAS_SECTION & NEXT
-  ChromaDB -> collection konten_isi (embedding konten_chunk)
-
-Fitur Baru:
-1. Sistem Hashing MD5: Mencegah duplikasi file dengan sidik jari unik
-2. Global Chunk Counter: Memperbaiki DuplicateIDError dengan ID unik per dokumen
-"""
-
 import hashlib
 import logging
 import re

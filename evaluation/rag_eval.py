@@ -554,7 +554,7 @@ class RAGEvaluator:
                             label=f'Mean: {f_mean:.3f}')
             ax_hist.set_xlabel("Score")
             ax_hist.set_ylabel("Frequency")
-            ax_hist.legend(fontsize=9)
+            ax_hist.legend(fontsize=10)
         ax_hist.set_xlim(0, 1)
         ax_hist.set_title("Faithfulness Distribution", fontsize=12, weight='bold')
         ax_hist.grid(axis='y', alpha=0.3)
@@ -575,7 +575,7 @@ class RAGEvaluator:
             if val > 0:
                 ax_speed.text(bar.get_x() + bar.get_width() / 2,
                               bar.get_height() + 0.005,
-                              f'{val:.2f}s', ha='center', fontsize=9, weight='bold')
+                              f'{val:.2f}s', ha='center', fontsize=10, weight='bold')
 
         # ── Panel kanan bawah: completeness causal depth ──────────────────────
         ax_depth = fig.add_subplot(gs[1, 1])
@@ -590,7 +590,7 @@ class RAGEvaluator:
             ax_depth.set_xticks(dlvls)
             for i, (lvl, cnt) in enumerate(zip(dlvls, dcounts)):
                 ax_depth.text(lvl, cnt + 0.1, str(cnt),
-                              ha='center', fontsize=9, weight='bold')
+                              ha='center', fontsize=10, weight='bold')
         ax_depth.set_xlabel("Causal Depth Level")
         ax_depth.set_ylabel("Number of Responses")
         ax_depth.set_title("Explanation Depth Distribution", fontsize=12, weight='bold')
@@ -675,7 +675,7 @@ class RAGEvaluator:
         for bars, prefix in [(bars1, "G"), (bars2, "R")]:
             for bar, val in zip(bars, [graph_f, graph_c, graph_r] if prefix == "G" else [raw_f, raw_c, raw_r]):
                 ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
-                        f'{val:.3f}', ha='center', fontsize=9, fontweight='bold')
+                        f'{val:.3f}', ha='center', fontsize=10, fontweight='bold')
         
         # ── Panel 2: Pipeline Component Latency ──────────────────────────────
         ax2 = fig.add_subplot(gs[0, 1])
@@ -711,7 +711,7 @@ class RAGEvaluator:
             for bar, val in zip(bars, times):
                 if val > 0:
                     ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-                            f'{val:.2f}s', ha='center', fontsize=9)
+                            f'{val:.2f}s', ha='center', fontsize=10)
         
         plt.suptitle("Graph RAG vs Raw RAG Comparison", fontsize=15, weight='bold')
 

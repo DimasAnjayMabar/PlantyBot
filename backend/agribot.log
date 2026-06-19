@@ -9174,3 +9174,20 @@ violations {
 2026-06-04 14:20:02  [36mINFO    [0m  [38;5;245magribot[0m  [Memory] Merangkum summary baru — chat_id=7  detail_id=36  prev_summary=1535 char
 2026-06-04 14:20:05  [36mINFO    [0m  [38;5;245magribot[0m  [Memory] Summary diperbarui → chat_id=7  detail_id=36  (1465 char)
 2026-06-04 14:20:07  [36mINFO    [0m  [38;5;245magribot[0m  [Memory] Recent entry disimpan → chat_id=7  detail_id=36
+2026-06-09 12:20:57  [36mINFO    [0m  [38;5;245magribot[0m  Membuat RAGPipeline baru...
+2026-06-09 12:20:57  [36mINFO    [0m  [38;5;245magribot[0m  Menginisialisasi RAGPipeline...
+2026-06-09 12:20:57  [36mINFO    [0m  [38;5;245magribot[0m  Memulai pemuatan model RAG...
+2026-06-09 12:20:57  [36mINFO    [0m  [38;5;245magribot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-06-09 12:20:57  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-06-09 12:21:06  [36mINFO    [0m  [38;5;245magribot[0m  [1/4] Embedding siap  (9.45s)
+2026-06-09 12:21:06  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-06-09 12:21:13  [36mINFO    [0m  [38;5;245magribot[0m  [2/4] Reranker siap  (6.53s)
+2026-06-09 12:21:13  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-06-09 12:21:13  [36mINFO    [0m  [38;5;245magribot[0m  [3/4] Groq client siap.
+2026-06-09 12:21:13  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-06-09 12:21:20  [36mINFO    [0m  [38;5;245magribot[0m  [4/4] NLP siap  (6.89s)
+2026-06-09 12:21:20  [36mINFO    [0m  [38;5;245magribot[0m  ✓ Semua model berhasil dimuat.
+2026-06-09 12:21:20  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB: F:\proyek magang\chatbot3\chroma_db
+2026-06-09 12:21:25  [36mINFO    [0m  [38;5;245magribot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
+2026-06-09 12:21:25  [36mINFO    [0m  [38;5;245magribot[0m  Neo4j: neo4j://127.0.0.1:7687
+2026-06-09 12:21:25  [36mINFO    [0m  [38;5;245magribot[0m  ✓ RAGPipeline siap.

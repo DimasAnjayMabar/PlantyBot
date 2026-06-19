@@ -34,8 +34,8 @@ def main():
         test_dataset_path="test_dataset.json",
         output_dir="output",
         skip_embedder=True,
-        skip_rag=False,
-        skip_llm=True
+        skip_rag=True,
+        skip_llm=False
     )
 
     print("\n[4] Summary:")

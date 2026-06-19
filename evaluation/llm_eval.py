@@ -49,10 +49,13 @@ class LLMEvaluator:
     # Data throughput official Groq untuk Llama 3.3 70B
     # Sumber: https://console.groq.com/docs/models
     OFFICIAL_THROUGHPUT = {
-        "llama-3.3-70b-versatile": {
-            "tokens_per_second": 125.0,  # ~125-150 tokens/sec berdasarkan official docs
-            "source": "https://console.groq.com/docs/models"
-        }
+        "qwen3-32b": {"tokens_per_second": 400.0, "source": "https://console.groq.com/docs/models"},
+        "gpt-oss-20b": {"tokens_per_second": 1000.0, "source": "https://console.groq.com/docs/models"},
+        "llama-3.1-8b-instant": {"tokens_per_second": 560.0, "source": "https://console.groq.com/docs/models"},
+        "llama-3.3-70b-versatile": {"tokens_per_second": 280.0, "source": "https://console.groq.com/docs/models"},
+        "llama-4-scout-17b-16e": {"tokens_per_second": 750.0, "source": "https://console.groq.com/docs/models"},
+        "gpt-oss-120b": {"tokens_per_second": 500.0, "source": "https://console.groq.com/docs/models"},
+
     }
     
     def __init__(self, rag_pipeline):
@@ -62,13 +65,21 @@ class LLMEvaluator:
     def evaluate_throughput(self) -> Dict:
         """
         Evaluasi throughput menggunakan data official Groq.
-        
-        Returns:
-            Dict dengan metrik throughput dari sumber official
         """
         model_name = CONFIG.get("groq_model", "llama-3.3-70b-versatile")
+        
+        # Hapus prefix provider (contoh: "meta-llama/llama-3.3-70b-versatile" menjadi "llama-3.3-70b-versatile")
+        clean_model_name = model_name.split('/')[-1]
+        
+        # Lakukan pencarian yang lebih fleksibel (partial match)
+        matched_key = None
+        for key in self.OFFICIAL_THROUGHPUT.keys():
+            if key in clean_model_name or clean_model_name in key:
+                matched_key = key
+                break
+                
         throughput_data = self.OFFICIAL_THROUGHPUT.get(
-            model_name, 
+            matched_key if matched_key else clean_model_name, 
             {"tokens_per_second": 100.0, "source": "estimated"}
         )
         
@@ -199,9 +210,11 @@ class LLMEvaluator:
         
         fluff_words = {
             'maaf', 'permisi', 'baiklah', 'jadi', 'sebenarnya',
-            'pada dasarnya', 'kurang lebih', 'mungkin',
+            'pada dasarnya', 'kurang lebih', 'mungkin', 
+            'tentu', 'berikut', 'adalah', 'silakan', 'sebagai', 
             'sorry', 'well', 'actually', 'basically', 'perhaps',
-            'maybe', 'just', 'so', 'like', 'you know'
+            'maybe', 'just', 'so', 'like', 'you know', 
+            'sure', 'certainly', 'here', 'here is' 
         }
         
         for resp in test_responses:
@@ -229,7 +242,7 @@ class LLMEvaluator:
             
             for i, token in enumerate(tokens[:30]):
                 token_clean = token.lower().strip('.,!?;:')
-                if token_clean in question_keywords or len(token_clean) > 5:
+                if token_clean in question_keywords:
                     first_relevant = i
                     break
             
