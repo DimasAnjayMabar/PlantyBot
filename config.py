@@ -79,6 +79,7 @@ def _apply_device_config():
     CONFIG["reranker_device"]  = "cuda" if has_cuda else "cpu"
     CONFIG["nlp_device"]       = 0 if has_cuda else -1
 
+# Change your Groq desired models here
 GROQ_ALLOWED_MODELS = {
     "llama-3.1-8b-instant",
     "llama-3.3-70b-versatile",
