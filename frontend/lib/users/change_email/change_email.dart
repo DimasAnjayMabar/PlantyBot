@@ -189,7 +189,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage>
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: _neon.withOpacity(0.25),
+                                color: _neon.withValues(alpha: 0.25),
                                 blurRadius: 12,
                                 spreadRadius: 0,
                               ),
@@ -319,7 +319,7 @@ class _NeonFieldState extends State<_NeonField> {
             boxShadow: _focused
                 ? [
                     BoxShadow(
-                      color: _neon.withOpacity(0.25),
+                      color: _neon.withValues(alpha: 0.25),
                       blurRadius: 16,
                       spreadRadius: 0,
                     ),
@@ -416,7 +416,7 @@ class _NeonButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: _neon.withOpacity(0.35),
+              color: _neon.withValues(alpha: 0.35),
               blurRadius: 20,
               spreadRadius: 0,
               offset: const Offset(0, 4),
@@ -427,7 +427,7 @@ class _NeonButton extends StatelessWidget {
           onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: _neon,
-            disabledBackgroundColor: _neon.withOpacity(0.5),
+            disabledBackgroundColor: _neon.withValues(alpha: 0.5),
             foregroundColor: Colors.black,
             elevation: 0,
             shape: RoundedRectangleBorder(

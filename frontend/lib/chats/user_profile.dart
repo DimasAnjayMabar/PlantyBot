@@ -498,7 +498,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _neon.withOpacity(0.25),
+                                  color: _neon.withValues(alpha: 0.25),
                                   blurRadius: 12,
                                   spreadRadius: 0,
                                 ),
@@ -586,7 +586,7 @@ class _ProfileCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFF1A1A1A)),
         boxShadow: [
           BoxShadow(
-            color: _neon.withOpacity(0.06),
+            color: _neon.withValues(alpha: 0.06),
             blurRadius: 24,
             spreadRadius: 0,
           ),
@@ -602,7 +602,7 @@ class _ProfileCard extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: _neon.withOpacity(0.3),
+                  color: _neon.withValues(alpha: 0.3),
                   blurRadius: 18,
                   spreadRadius: 2,
                 ),
@@ -679,9 +679,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.35), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
       ),
       child: Text(
         label,
@@ -939,7 +939,7 @@ class _LogoutButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          backgroundColor: const Color(0xFFFF4D4D).withOpacity(0.06),
+          backgroundColor: const Color(0xFFFF4D4D).withValues(alpha: 0.06),
         ),
         child: isLoading
             ? const SizedBox(

@@ -17,13 +17,13 @@ import 'package:google_fonts/google_fonts.dart';
 // ---------------------------------------------------------------------------
 
 const _kGreetings = [
-  'Halo! Ada yang bisa saya bantu hari ini? 🌱',
-  'Selamat datang! Silakan tanyakan seputar pertanian kepada saya.',
-  'Hai! Saya siap membantu menjawab pertanyaan agrikultur Anda.',
-  'Halo, petani hebat! Ada pertanyaan seputar tanaman atau lahan?',
-  'Selamat datang kembali! Apa yang ingin Anda ketahui hari ini?',
-  'Hai! Saya AgriBot — tanyakan apa saja soal pertanian. 🌾',
-  'Halo! Butuh saran soal pupuk, hama, atau panen? Saya siap bantu!',
+  'Halo! Ada yang bisa Ragna bantu hari ini? 🔍',
+  'Selamat datang! Ragna siap membantu menjawab pertanyaan Anda.',
+  'Hai! Ragna di sini, siap membantu dengan pengetahuan yang terhubung.',
+  'Halo! Ragna dapat membantu Anda menjelajahi informasi dengan mudah.',
+  'Selamat datang kembali! Ragna siap membantu Anda hari ini.',
+  'Hai! Ragna — asisten cerdas Anda untuk segala pertanyaan. 🧠',
+  'Halo! Butuh bantuan? Ragna siap membantu dengan pengetahuan yang luas.',
 ];
 
 // ---------------------------------------------------------------------------
@@ -261,7 +261,9 @@ class _ChatsPageState extends State<ChatsPage>
   }
 
   void _cancelAllTrackers() {
-    for (final t in _trackers.values) t.cancel();
+    for (final t in _trackers.values) {
+      t.cancel();
+    }
     _trackers.clear();
   }
 
@@ -1010,8 +1012,8 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
                     height: 72,
                     decoration: BoxDecoration(
                       color: _panelVisible
-                          ? const Color(0xFF16DB65).withOpacity(0.15)
-                          : const Color(0xFF1A1A1A).withOpacity(0.85),
+                          ? const Color(0xFF16DB65).withValues(alpha: 0.15)
+                          : const Color(0xFF1A1A1A).withValues(alpha: 0.85),
                       borderRadius: const BorderRadius.only(
                         topRight: Radius.circular(8),
                         bottomRight: Radius.circular(8),
@@ -1019,17 +1021,17 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
                       border: Border(
                         top: BorderSide(
                           color: _panelVisible
-                              ? const Color(0xFF16DB65).withOpacity(0.4)
+                              ? const Color(0xFF16DB65).withValues(alpha: 0.4)
                               : const Color(0xFF2A2A2A),
                         ),
                         right: BorderSide(
                           color: _panelVisible
-                              ? const Color(0xFF16DB65).withOpacity(0.4)
+                              ? const Color(0xFF16DB65).withValues(alpha: 0.4)
                               : const Color(0xFF2A2A2A),
                         ),
                         bottom: BorderSide(
                           color: _panelVisible
-                              ? const Color(0xFF16DB65).withOpacity(0.4)
+                              ? const Color(0xFF16DB65).withValues(alpha: 0.4)
                               : const Color(0xFF2A2A2A),
                         ),
                       ),
@@ -1071,7 +1073,7 @@ class _QuestionNavigatorState extends State<_QuestionNavigator>
                         border: Border.all(color: const Color(0xFF2A2A2A)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.4),
+                            color: Colors.black.withValues(alpha: 0.4),
                             blurRadius: 12,
                             offset: const Offset(2, 4),
                           ),
@@ -1358,12 +1360,12 @@ class _GreetingView extends StatelessWidget {
                 color: const Color(0x3316DB65),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: const Color(0xFF16DB65).withOpacity(0.4),
+                  color: const Color(0xFF16DB65).withValues(alpha: 0.4),
                   width: 1.5,
                 ),
               ),
               child: const Icon(
-                Icons.eco_rounded,
+                Icons.account_tree_rounded, // Icon Graph RAG
                 color: Color(0xFF16DB65),
                 size: 30,
               ),
@@ -1381,7 +1383,7 @@ class _GreetingView extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Ketik pertanyaan Anda di bawah untuk memulai.',
+              'Ketik pertanyaan Anda di bawah untuk memulai percakapan dengan Ragna.',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 13,

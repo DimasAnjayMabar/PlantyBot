@@ -257,7 +257,7 @@ class _LoginPageState extends State<LoginPage>
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Selamat datang kembali di TandurBot.',
+                        'Selamat datang kembali di Ragna.',
                         style: GoogleFonts.poppins(
                           fontSize: 13,
                           color: _textMuted,
@@ -367,7 +367,6 @@ class _LoginPageState extends State<LoginPage>
 // ---------------------------------------------------------------------------
 // Logo widget
 // ---------------------------------------------------------------------------
-
 class _Logo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -381,19 +380,23 @@ class _Logo extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: _neon.withOpacity(0.35),
+                color: _neon.withValues(alpha: 0.35),
                 blurRadius: 20,
                 spreadRadius: 2,
               ),
             ],
           ),
           child: const Center(
-            child: Text('🌿', style: TextStyle(fontSize: 26)),
+            child: Icon(
+              Icons.account_tree_rounded, // Icon graph/tree untuk Graph RAG
+              color: Color(0xFF16DB65),
+              size: 28,
+            ),
           ),
         ),
         const SizedBox(width: 12),
         Text(
-          'TandurBot',
+          'Ragna',
           style: GoogleFonts.poppins(
             fontSize: 22,
             fontWeight: FontWeight.w700,
@@ -417,13 +420,12 @@ class _NeonField extends StatefulWidget {
     required this.hint,
     required this.icon,
     this.obscureText = false,
-    this.keyboardType,
     this.suffixIcon,
     this.validator,
     this.textInputAction,
     this.onFieldSubmitted,
     this.focusNode,
-  });
+  }) : keyboardType = null;
 
   final TextEditingController controller;
   final String label;
@@ -491,7 +493,7 @@ class _NeonFieldState extends State<_NeonField> {
             boxShadow: _focused
                 ? [
                     BoxShadow(
-                      color: _neon.withOpacity(0.25),
+                      color: _neon.withValues(alpha: 0.25),
                       blurRadius: 16,
                       spreadRadius: 0,
                     ),
@@ -583,7 +585,7 @@ class _NeonButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: _neon.withOpacity(0.35),
+              color: _neon.withValues(alpha: 0.35),
               blurRadius: 20,
               spreadRadius: 0,
               offset: const Offset(0, 4),
@@ -594,7 +596,7 @@ class _NeonButton extends StatelessWidget {
           onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: _neon,
-            disabledBackgroundColor: _neon.withOpacity(0.5),
+            disabledBackgroundColor: _neon.withValues(alpha: 0.5),
             foregroundColor: Colors.black,
             elevation: 0,
             shape: RoundedRectangleBorder(

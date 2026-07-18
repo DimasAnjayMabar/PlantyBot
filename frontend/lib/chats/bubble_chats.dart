@@ -31,7 +31,7 @@ class AiAvatar extends StatelessWidget {
     decoration: BoxDecoration(
       shape: BoxShape.circle,
       color: const Color(0x3316DB65),
-      border: Border.all(color: const Color(0xFF16DB65).withOpacity(0.4)),
+      border: Border.all(color: const Color(0xFF16DB65).withValues(alpha: 0.4)),
     ),
     child: const Icon(Icons.eco_rounded, color: Color(0xFF16DB65), size: 15),
   );
@@ -59,7 +59,7 @@ class UserBubble extends StatelessWidget {
             bottomLeft: Radius.circular(16),
             bottomRight: Radius.circular(4),
           ),
-          border: Border.all(color: const Color(0xFF16DB65).withOpacity(0.25)),
+          border: Border.all(color: const Color(0xFF16DB65).withValues(alpha: 0.25)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -112,7 +112,7 @@ class AiBubble extends StatelessWidget {
         if (isError)
           Container(
             width: 30, height: 30,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0x33FF4444), border: Border.all(color: const Color(0xFFFF4444).withOpacity(0.4))),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0x33FF4444), border: Border.all(color: const Color(0xFFFF4444).withValues(alpha: 0.4))),
             child: const Icon(Icons.error_outline_rounded, color: Color(0xFFFF4444), size: 15),
           )
         else
@@ -131,7 +131,7 @@ class AiBubble extends StatelessWidget {
               ),
               border: Border.all(
                 color: isError 
-                    ? const Color(0xFFFF4444).withOpacity(0.3)
+                    ? const Color(0xFFFF4444).withValues(alpha: 0.3)
                     : const Color(0xFF1A1A1A),
               ),
             ),
@@ -201,7 +201,7 @@ MarkdownStyleSheet _markdownStyleSheet() {
     codeblockDecoration: BoxDecoration(
       color: const Color(0xFF0A1A0A),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xFF16DB65).withOpacity(0.2)),
+      border: Border.all(color: const Color(0xFF16DB65).withValues(alpha: 0.2)),
     ),
     codeblockPadding: const EdgeInsets.all(14),
     listBullet: GoogleFonts.poppins(
@@ -218,7 +218,7 @@ MarkdownStyleSheet _markdownStyleSheet() {
     blockquoteDecoration: BoxDecoration(
       border: Border(
         left: BorderSide(
-          color: const Color(0xFF16DB65).withOpacity(0.5),
+          color: const Color(0xFF16DB65).withValues(alpha: 0.5),
           width: 3,
         ),
       ),
@@ -228,7 +228,7 @@ MarkdownStyleSheet _markdownStyleSheet() {
       fontSize: 14,
       color: const Color(0xFF16DB65),
       decoration: TextDecoration.underline,
-      decorationColor: const Color(0xFF16DB65).withOpacity(0.5),
+      decorationColor: const Color(0xFF16DB65).withValues(alpha: 0.5),
     ),
   );
 }
@@ -256,12 +256,12 @@ class ActionChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: active
-              ? const Color(0xFF16DB65).withOpacity(0.15)
+              ? const Color(0xFF16DB65).withValues(alpha: 0.15)
               : const Color(0xFF1A1A1A),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: active
-                ? const Color(0xFF16DB65).withOpacity(0.5)
+                ? const Color(0xFF16DB65).withValues(alpha: 0.5)
                 : const Color(0xFF2A2A2A),
           ),
         ),
@@ -449,7 +449,7 @@ class DisconnectedBubble extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: const Color(0x33FF9800),
                   border: Border.all(
-                    color: const Color(0xFFFF9800).withOpacity(0.4),
+                    color: const Color(0xFFFF9800).withValues(alpha: 0.4),
                   ),
                 ),
                 child: const Icon(
@@ -474,7 +474,7 @@ class DisconnectedBubble extends StatelessWidget {
                       bottomRight: Radius.circular(16),
                     ),
                     border: Border.all(
-                      color: const Color(0xFFFF9800).withOpacity(0.3),
+                      color: const Color(0xFFFF9800).withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -500,7 +500,7 @@ class DisconnectedBubble extends StatelessWidget {
                             color: const Color(0xFF2A1A00),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: const Color(0xFFFF9800).withOpacity(0.5),
+                              color: const Color(0xFFFF9800).withValues(alpha: 0.5),
                             ),
                           ),
                           child: Row(

@@ -202,7 +202,7 @@ class _InputBarState extends State<InputBar> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF16DB65).withOpacity(0.12),
+                        color: const Color(0xFF16DB65).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
@@ -382,10 +382,10 @@ class _InputBarState extends State<InputBar> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? accent.withOpacity(0.08) : const Color(0xFF151515),
+          color: isSelected ? accent.withValues(alpha: 0.08) : const Color(0xFF151515),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? accent.withOpacity(0.5) : const Color(0xFF222222),
+            color: isSelected ? accent.withValues(alpha: 0.5) : const Color(0xFF222222),
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -395,7 +395,7 @@ class _InputBarState extends State<InputBar> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isSelected ? accent.withOpacity(0.15) : const Color(0xFF1A1A1A),
+                color: isSelected ? accent.withValues(alpha: 0.15) : const Color(0xFF1A1A1A),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -451,27 +451,27 @@ class _InputBarState extends State<InputBar> {
   // ── Model Selector Dialog ─────────────────────────────────────────────────
 
   Future<void> _showModelDialog(BuildContext context) async {
-    List<Map<String, dynamic>> _groqModels = [];
-    bool _loadingModels = true;
-    String _selectedId = _activeModelId;
+    List<Map<String, dynamic>> groqModels = [];
+    bool loadingModels = true;
+    String selectedId = _activeModelId;
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDS) {
-          if (_loadingModels) {
+          if (loadingModels) {
             Future.microtask(() async {
               try {
                 final raw = await widget.onGetModels();
                 if (ctx.mounted) {
                   setDS(() {
-                    _groqModels = raw.map((m) => Map<String, dynamic>.from(m)).toList();
-                    _loadingModels = false;
+                    groqModels = raw.map((m) => Map<String, dynamic>.from(m)).toList();
+                    loadingModels = false;
                   });
                 }
               } catch (_) {
-                if (ctx.mounted) setDS(() => _loadingModels = false);
+                if (ctx.mounted) setDS(() => loadingModels = false);
               }
             });
           }
@@ -500,7 +500,7 @@ class _InputBarState extends State<InputBar> {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF16DB65).withOpacity(0.12),
+                            color: const Color(0xFF16DB65).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
@@ -544,14 +544,14 @@ class _InputBarState extends State<InputBar> {
                     ),
                     const SizedBox(height: 16),
                     Expanded(
-                      child: _loadingModels
+                      child: loadingModels
                           ? const Center(
                               child: CircularProgressIndicator(
                                 color: Color(0xFF16DB65),
                                 strokeWidth: 2,
                               ),
                             )
-                          : _groqModels.isEmpty
+                          : groqModels.isEmpty
                           ? Center(
                               child: Text(
                                 'Gagal memuat daftar model.',
@@ -564,16 +564,16 @@ class _InputBarState extends State<InputBar> {
                           : ListView.separated(
                               shrinkWrap: true,
                               physics: const BouncingScrollPhysics(),
-                              itemCount: _groqModels.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
+                              itemCount: groqModels.length,
+                              separatorBuilder: (_, _) => const SizedBox(height: 8),
                               itemBuilder: (_, i) {
-                                final m = _groqModels[i];
+                                final m = groqModels[i];
                                 final id = m['id'] as String;
                                 final name = m['name'] as String;
                                 final provider = m['provider'] as String;
                                 final desc = m['description'] as String? ?? '';
                                 final tier = m['tier'] as String? ?? 'large';
-                                final isSelected = _selectedId == id;
+                                final isSelected = selectedId == id;
 
                                 final Color accent = id.startsWith('mistral')
                                     ? const Color(0xFF6C8EFF)
@@ -594,7 +594,7 @@ class _InputBarState extends State<InputBar> {
 
                                 return InkWell(
                                   borderRadius: BorderRadius.circular(12),
-                                  onTap: () => setDS(() => _selectedId = id),
+                                  onTap: () => setDS(() => selectedId = id),
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 150),
                                     padding: const EdgeInsets.symmetric(
@@ -603,12 +603,12 @@ class _InputBarState extends State<InputBar> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: isSelected
-                                          ? accent.withOpacity(0.08)
+                                          ? accent.withValues(alpha: 0.08)
                                           : const Color(0xFF151515),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: isSelected
-                                            ? accent.withOpacity(0.5)
+                                            ? accent.withValues(alpha: 0.5)
                                             : const Color(0xFF222222),
                                         width: isSelected ? 1.5 : 1,
                                       ),
@@ -620,7 +620,7 @@ class _InputBarState extends State<InputBar> {
                                           height: 34,
                                           decoration: BoxDecoration(
                                             color: isSelected
-                                                ? accent.withOpacity(0.15)
+                                                ? accent.withValues(alpha: 0.15)
                                                 : const Color(0xFF1A1A1A),
                                             borderRadius: BorderRadius.circular(8),
                                           ),
@@ -657,7 +657,7 @@ class _InputBarState extends State<InputBar> {
                                                       vertical: 2,
                                                     ),
                                                     decoration: BoxDecoration(
-                                                      color: tierColor.withOpacity(0.12),
+                                                      color: tierColor.withValues(alpha: 0.12),
                                                       borderRadius: BorderRadius.circular(4),
                                                     ),
                                                     child: Text(
@@ -740,7 +740,7 @@ class _InputBarState extends State<InputBar> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _selectedId == _activeModelId
+                            onPressed: selectedId == _activeModelId
                                 ? null
                                 : () async {
                                     Navigator.of(ctx).pop();
@@ -750,11 +750,11 @@ class _InputBarState extends State<InputBar> {
                                     try {
                                       await widget.onSetModel(
                                         'groq',
-                                        path: _selectedId,
+                                        path: selectedId,
                                       );
                                       if (mounted) {
                                         setState(() {
-                                          _activeModelId = _selectedId;
+                                          _activeModelId = selectedId;
                                           _modelSwitching = false;
                                         });
                                       }
@@ -784,7 +784,7 @@ class _InputBarState extends State<InputBar> {
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: _selectedId == _activeModelId
+                                color: selectedId == _activeModelId
                                     ? const Color(0xFF555555)
                                     : Colors.black,
                               ),
@@ -804,10 +804,10 @@ class _InputBarState extends State<InputBar> {
   }
 
   void _showUploadDialog(BuildContext context) {
-    List<PdfUploadFile> _selectedFiles = [];
-    bool _isUploading = false;
-    int _uploadDone = 0;
-    String _embedderType = 'improved'; 
+    List<PdfUploadFile> selectedFiles = [];
+    bool isUploading = false;
+    int uploadDone = 0;
+    String embedderType = 'improved'; 
 
     showDialog(
       context: context,
@@ -828,15 +828,15 @@ class _InputBarState extends State<InputBar> {
                 .map((f) => PdfUploadFile(
                       bytes: f.bytes!,
                       name: f.name,
-                      embedderType: _embedderType,
+                      embedderType: embedderType,
                     ))
                 .toList();
 
             setDialogState(() {
-              final existingNames = _selectedFiles.map((f) => f.name).toSet();
+              final existingNames = selectedFiles.map((f) => f.name).toSet();
               for (final f in newFiles) {
                 if (!existingNames.contains(f.name)) {
-                  _selectedFiles.add(f);
+                  selectedFiles.add(f);
                   existingNames.add(f.name);
                 }
               }
@@ -844,24 +844,24 @@ class _InputBarState extends State<InputBar> {
           }
 
           void removeFile(int index) {
-            setDialogState(() => _selectedFiles.removeAt(index));
+            setDialogState(() => selectedFiles.removeAt(index));
           }
 
           Future<void> doUpload() async {
-            if (_selectedFiles.isEmpty) return;
+            if (selectedFiles.isEmpty) return;
             setDialogState(() {
-              _isUploading = true;
-              _uploadDone = 0;
+              isUploading = true;
+              uploadDone = 0;
             });
 
-            final filesToUpload = _selectedFiles
+            final filesToUpload = selectedFiles
                 .map((f) => PdfUploadFile(
                       bytes: f.bytes,
                       name: f.name,
                       judul: f.judul,
                       penulis: f.penulis,
                       tahun: f.tahun,
-                      embedderType: _embedderType,
+                      embedderType: embedderType,
                     ))
                 .toList();
 
@@ -869,7 +869,7 @@ class _InputBarState extends State<InputBar> {
               filesToUpload,
               onProgress: (done, total) {
                 if (ctx.mounted) {
-                  setDialogState(() => _uploadDone = done);
+                  setDialogState(() => uploadDone = done);
                 }
               },
             );
@@ -877,7 +877,7 @@ class _InputBarState extends State<InputBar> {
             if (ctx.mounted) Navigator.of(ctx).pop();
           }
 
-          final hasFiles = _selectedFiles.isNotEmpty;
+          final hasFiles = selectedFiles.isNotEmpty;
 
           return Dialog(
             backgroundColor: const Color(0xFF111111),
@@ -902,7 +902,7 @@ class _InputBarState extends State<InputBar> {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF16DB65).withOpacity(0.12),
+                            color: const Color(0xFF16DB65).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
@@ -922,7 +922,7 @@ class _InputBarState extends State<InputBar> {
                             ),
                           ),
                         ),
-                        if (!_isUploading)
+                        if (!isUploading)
                           GestureDetector(
                             onTap: () => Navigator.of(ctx).pop(),
                             child: const Icon(
@@ -977,10 +977,10 @@ class _InputBarState extends State<InputBar> {
                           const Divider(height: 1, color: Color(0xFF1E1E1E)),
                           // Improved option
                           InkWell(
-                            onTap: _isUploading
+                            onTap: isUploading
                                 ? null
                                 : () => setDialogState(
-                                      () => _embedderType = 'improved',
+                                      () => embedderType = 'improved',
                                     ),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -996,16 +996,16 @@ class _InputBarState extends State<InputBar> {
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: _embedderType == 'improved'
+                                        color: embedderType == 'improved'
                                             ? const Color(0xFF16DB65)
                                             : const Color(0xFF444444),
                                         width: 2,
                                       ),
-                                      color: _embedderType == 'improved'
+                                      color: embedderType == 'improved'
                                           ? const Color(0xFF16DB65)
                                           : Colors.transparent,
                                     ),
-                                    child: _embedderType == 'improved'
+                                    child: embedderType == 'improved'
                                         ? const Icon(
                                             Icons.check,
                                             size: 10,
@@ -1024,7 +1024,7 @@ class _InputBarState extends State<InputBar> {
                                           style: GoogleFonts.poppins(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
-                                            color: _embedderType == 'improved'
+                                            color: embedderType == 'improved'
                                                 ? Colors.white
                                                 : const Color(0xFF888888),
                                           ),
@@ -1046,10 +1046,10 @@ class _InputBarState extends State<InputBar> {
                           const Divider(height: 1, color: Color(0xFF1A1A1A)),
                           // Raw option
                           InkWell(
-                            onTap: _isUploading
+                            onTap: isUploading
                                 ? null
                                 : () => setDialogState(
-                                      () => _embedderType = 'raw',
+                                      () => embedderType = 'raw',
                                     ),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -1065,16 +1065,16 @@ class _InputBarState extends State<InputBar> {
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: _embedderType == 'raw'
+                                        color: embedderType == 'raw'
                                             ? const Color(0xFFFFAA33)
                                             : const Color(0xFF444444),
                                         width: 2,
                                       ),
-                                      color: _embedderType == 'raw'
+                                      color: embedderType == 'raw'
                                           ? const Color(0xFFFFAA33)
                                           : Colors.transparent,
                                     ),
-                                    child: _embedderType == 'raw'
+                                    child: embedderType == 'raw'
                                         ? const Icon(
                                             Icons.check,
                                             size: 10,
@@ -1093,7 +1093,7 @@ class _InputBarState extends State<InputBar> {
                                           style: GoogleFonts.poppins(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
-                                            color: _embedderType == 'raw'
+                                            color: embedderType == 'raw'
                                                 ? Colors.white
                                                 : const Color(0xFF888888),
                                           ),
@@ -1117,7 +1117,7 @@ class _InputBarState extends State<InputBar> {
                     ),
                     const SizedBox(height: 12),
                     GestureDetector(
-                      onTap: _isUploading ? null : pickFiles,
+                      onTap: isUploading ? null : pickFiles,
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
@@ -1129,7 +1129,7 @@ class _InputBarState extends State<InputBar> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: hasFiles
-                                ? const Color(0xFF16DB65).withOpacity(0.4)
+                                ? const Color(0xFF16DB65).withValues(alpha: 0.4)
                                 : const Color(0xFF2A2A2A),
                             width: hasFiles ? 1.5 : 1,
                           ),
@@ -1165,14 +1165,14 @@ class _InputBarState extends State<InputBar> {
                     ),
                     if (hasFiles) ...[
                       const SizedBox(height: 12),
-                      if (_isUploading) ...[
+                      if (isUploading) ...[
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Mengunggah $_uploadDone dari ${_selectedFiles.length} file...',
+                                'Mengunggah $uploadDone dari ${selectedFiles.length} file...',
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   color: const Color(0xFF16DB65),
@@ -1180,9 +1180,9 @@ class _InputBarState extends State<InputBar> {
                               ),
                               const SizedBox(height: 6),
                               LinearProgressIndicator(
-                                value: _selectedFiles.isEmpty
+                                value: selectedFiles.isEmpty
                                     ? 0
-                                    : _uploadDone / _selectedFiles.length,
+                                    : uploadDone / selectedFiles.length,
                                 backgroundColor: const Color(0xFF1A1A1A),
                                 color: const Color(0xFF16DB65),
                                 borderRadius: BorderRadius.circular(4),
@@ -1194,11 +1194,11 @@ class _InputBarState extends State<InputBar> {
                       Flexible(
                         child: ListView.separated(
                           shrinkWrap: false,
-                          itemCount: _selectedFiles.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 6),
+                          itemCount: selectedFiles.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 6),
                           itemBuilder: (_, i) {
-                            final f = _selectedFiles[i];
-                            final isDone = _isUploading && i < _uploadDone;
+                            final f = selectedFiles[i];
+                            final isDone = isUploading && i < uploadDone;
                             return Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -1209,7 +1209,7 @@ class _InputBarState extends State<InputBar> {
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: isDone
-                                      ? const Color(0xFF16DB65).withOpacity(0.4)
+                                      ? const Color(0xFF16DB65).withValues(alpha: 0.4)
                                       : const Color(0xFF1E1E1E),
                                 ),
                               ),
@@ -1245,7 +1245,7 @@ class _InputBarState extends State<InputBar> {
                                       color: const Color(0xFF555555),
                                     ),
                                   ),
-                                  if (!_isUploading) ...[
+                                  if (!isUploading) ...[
                                     const SizedBox(width: 6),
                                     GestureDetector(
                                       onTap: () => removeFile(i),
@@ -1268,7 +1268,7 @@ class _InputBarState extends State<InputBar> {
                       children: [
                         Expanded(
                           child: TextButton(
-                            onPressed: _isUploading ? null : () => Navigator.of(ctx).pop(),
+                            onPressed: isUploading ? null : () => Navigator.of(ctx).pop(),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
@@ -1279,7 +1279,7 @@ class _InputBarState extends State<InputBar> {
                               'Batal',
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
-                                color: _isUploading
+                                color: isUploading
                                     ? const Color(0xFF444444)
                                     : const Color(0xFF888888),
                               ),
@@ -1289,9 +1289,9 @@ class _InputBarState extends State<InputBar> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: (hasFiles && !_isUploading) ? doUpload : null,
+                            onPressed: (hasFiles && !isUploading) ? doUpload : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: (hasFiles && !_isUploading)
+                              backgroundColor: (hasFiles && !isUploading)
                                   ? const Color(0xFF16DB65)
                                   : const Color(0xFF1A1A1A),
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1300,7 +1300,7 @@ class _InputBarState extends State<InputBar> {
                               ),
                               elevation: 0,
                             ),
-                            child: _isUploading
+                            child: isUploading
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
@@ -1311,12 +1311,12 @@ class _InputBarState extends State<InputBar> {
                                   )
                                 : Text(
                                     hasFiles
-                                        ? 'Unggah (${_selectedFiles.length})'
+                                        ? 'Unggah (${selectedFiles.length})'
                                         : 'Unggah',
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: (hasFiles && !_isUploading)
+                                      color: (hasFiles && !isUploading)
                                           ? Colors.black
                                           : const Color(0xFF555555),
                                     ),

@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:frontend/chats/service_chats.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'chats.dart' show ChatTopic, ChatUserProfile;
-
 // ---------------------------------------------------------------------------
 // Konstanta Warna (shared)
 // ---------------------------------------------------------------------------
@@ -123,7 +121,7 @@ class ChatSidebar extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF4D4D).withOpacity(0.1),
+                    color: const Color(0xFFFF4D4D).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -223,17 +221,22 @@ class _SidebarLogo extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 32, height: 32,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: kChatNeonDim,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: kChatNeon.withOpacity(0.4)),
+              border: Border.all(color: kChatNeon.withValues(alpha: 0.4)),
             ),
-            child: const Icon(Icons.eco_rounded, color: kChatNeon, size: 18),
+            child: const Icon(
+              Icons.account_tree_rounded,
+              color: kChatNeon,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 10),
           Text(
-            'TandurBot',
+            'Ragna',
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -253,8 +256,11 @@ class _SidebarLogo extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: kChatBorder),
                 ),
-                child: const Icon(Icons.edit_square,
-                    size: 16, color: kChatTextMuted),
+                child: const Icon(
+                  Icons.edit_square,
+                  size: 16,
+                  color: kChatTextMuted,
+                ),
               ),
             ),
           ),
@@ -349,7 +355,7 @@ class _TopicList extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF4D4D).withOpacity(0.1),
+                    color: const Color(0xFFFF4D4D).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -515,12 +521,12 @@ class _TopicTileState extends State<_TopicTile> {
           color: widget.isActive
               ? kChatNeonDim
               : _hovering
-                  ? Colors.white.withOpacity(0.04)
+                  ? Colors.white.withValues(alpha: 0.04)
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: widget.isActive
-                ? kChatNeon.withOpacity(0.3)
+                ? kChatNeon.withValues(alpha: 0.3)
                 : Colors.transparent,
           ),
         ),
@@ -697,7 +703,7 @@ class _ProfileCardState extends State<_ProfileCard> {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: _hovering
-                  ? kChatNeon.withOpacity(0.4)
+                  ? kChatNeon.withValues(alpha: 0.4)
                   : kChatBorder,
             ),
           ),
@@ -708,7 +714,7 @@ class _ProfileCardState extends State<_ProfileCard> {
                 decoration: BoxDecoration(
                   shape : BoxShape.circle,
                   color : kChatNeonDim,
-                  border: Border.all(color: kChatNeon.withOpacity(0.5)),
+                  border: Border.all(color: kChatNeon.withValues(alpha: 0.5)),
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -784,7 +790,7 @@ class _LogoutButton extends StatelessWidget {
           side: const BorderSide(color: Color(0xFFFF4D4D), width: 1),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10)),
-          backgroundColor: const Color(0xFFFF4D4D).withOpacity(0.06),
+          backgroundColor: const Color(0xFFFF4D4D).withValues(alpha: 0.06),
         ),
       ),
     );

@@ -551,7 +551,7 @@ class ChatService {
       if (imageBytes != null) {
         // Mode Vision (Kirim Multipart Data)
         final formData = FormData.fromMap({
-          if (chatId != null) 'chat_id': chatId,
+          'chat_id': ?chatId,
           'question': question.isEmpty ? 'Tolong jelaskan gambar tanaman ini.' : question,
           'file': MultipartFile.fromBytes(
             imageBytes,

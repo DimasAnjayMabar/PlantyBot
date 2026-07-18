@@ -223,7 +223,7 @@ class _RegisterVerifyOtpPageState extends State<RegisterVerifyOtpPage>
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: _neon.withOpacity(0.25),
+                            color: _neon.withValues(alpha: 0.25),
                             blurRadius: 12,
                             spreadRadius: 0,
                           ),
@@ -281,7 +281,7 @@ class _RegisterVerifyOtpPageState extends State<RegisterVerifyOtpPage>
                       color: _neonDim,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: _neon.withOpacity(0.25),
+                        color: _neon.withValues(alpha: 0.25),
                         width: 1,
                       ),
                     ),
@@ -341,7 +341,7 @@ class _RegisterVerifyOtpPageState extends State<RegisterVerifyOtpPage>
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: _neon.withOpacity(0.6),
+                              color: _neon.withValues(alpha: 0.6),
                             ),
                           )
                         : RichText(
@@ -438,7 +438,7 @@ class _NeonFieldState extends State<_NeonField> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             boxShadow: _focused
-                ? [BoxShadow(color: _neon.withOpacity(0.25), blurRadius: 16)]
+                ? [BoxShadow(color: _neon.withValues(alpha: 0.25), blurRadius: 16)]
                 : [],
           ),
           child: Focus(
@@ -527,7 +527,7 @@ class _NeonButton extends StatelessWidget {
           boxShadow: active
               ? [
                   BoxShadow(
-                    color: _neon.withOpacity(0.35),
+                    color: _neon.withValues(alpha: 0.35),
                     blurRadius: 20,
                     spreadRadius: 0,
                     offset: const Offset(0, 4),
@@ -539,7 +539,7 @@ class _NeonButton extends StatelessWidget {
           onPressed: active ? onPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: _neon,
-            disabledBackgroundColor: _neon.withOpacity(0.25),
+            disabledBackgroundColor: _neon.withValues(alpha: 0.25),
             foregroundColor: Colors.black,
             elevation: 0,
             shape: RoundedRectangleBorder(

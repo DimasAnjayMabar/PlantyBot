@@ -172,7 +172,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: _neon.withOpacity(0.25),
+                            color: _neon.withValues(alpha: 0.25),
                             blurRadius: 12,
                             spreadRadius: 0,
                           ),
@@ -245,7 +245,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                     children: [
                       Expanded(
                         child: Divider(
-                          color: Colors.white.withOpacity(0.08),
+                          color: Colors.white.withValues(alpha: 0.08),
                           thickness: 1,
                         ),
                       ),
@@ -261,7 +261,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                       ),
                       Expanded(
                         child: Divider(
-                          color: Colors.white.withOpacity(0.08),
+                          color: Colors.white.withValues(alpha: 0.08),
                           thickness: 1,
                         ),
                       ),
@@ -313,12 +313,12 @@ class _NeonField extends StatefulWidget {
     required this.label,
     required this.hint,
     required this.icon,
-    this.obscureText = false,
     this.keyboardType,
-    this.suffixIcon,
     this.validator,
     this.textInputAction,
     this.onFieldSubmitted,
+    this.obscureText = false,
+    this.suffixIcon,
   });
 
   final TextEditingController controller;
@@ -361,7 +361,7 @@ class _NeonFieldState extends State<_NeonField> {
             boxShadow: _focused
                 ? [
                     BoxShadow(
-                      color: _neon.withOpacity(0.25),
+                      color: _neon.withValues(alpha: 0.25),
                       blurRadius: 16,
                       spreadRadius: 0,
                     ),
@@ -460,7 +460,7 @@ class _NeonButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: _neon.withOpacity(0.35),
+              color: _neon.withValues(alpha: 0.35),
               blurRadius: 20,
               spreadRadius: 0,
               offset: const Offset(0, 4),
@@ -471,7 +471,7 @@ class _NeonButton extends StatelessWidget {
           onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: _neon,
-            disabledBackgroundColor: _neon.withOpacity(0.5),
+            disabledBackgroundColor: _neon.withValues(alpha: 0.5),
             foregroundColor: Colors.black,
             elevation: 0,
             shape: RoundedRectangleBorder(
