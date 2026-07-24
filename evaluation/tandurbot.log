@@ -211,3 +211,36 @@
 2026-06-19 13:57:39  [36mINFO    [0m  [38;5;245mtandurbot[0m  ChromaDB siap — 'konten_isi'  (330 dokumen)
 2026-06-19 13:57:39  [36mINFO    [0m  [38;5;245mtandurbot[0m  Neo4j: neo4j://127.0.0.1:7687
 2026-06-19 13:57:39  [36mINFO    [0m  [38;5;245mtandurbot[0m  ✓ RAGPipeline siap.
+2026-07-22 11:15:02  [36mINFO    [0m  [38;5;245mtandurbot[0m  Memulai pemuatan model RAG...
+2026-07-22 11:15:02  [36mINFO    [0m  [38;5;245mtandurbot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-07-22 11:15:02  [36mINFO    [0m  [38;5;245mtandurbot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-07-22 11:15:14  [36mINFO    [0m  [38;5;245mtandurbot[0m  [1/4] Embedding siap  (11.96s)
+2026-07-22 11:15:14  [36mINFO    [0m  [38;5;245mtandurbot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-07-22 11:15:23  [36mINFO    [0m  [38;5;245mtandurbot[0m  [2/4] Reranker siap  (9.03s)
+2026-07-22 11:15:23  [36mINFO    [0m  [38;5;245mtandurbot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-07-22 11:15:23  [36mINFO    [0m  [38;5;245mtandurbot[0m  [3/4] Groq client siap.
+2026-07-22 11:15:23  [36mINFO    [0m  [38;5;245mtandurbot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-07-22 11:15:30  [36mINFO    [0m  [38;5;245mtandurbot[0m  [4/4] NLP siap  (7.43s)
+2026-07-22 11:15:30  [36mINFO    [0m  [38;5;245mtandurbot[0m  ✓ Semua model berhasil dimuat.
+2026-07-22 12:03:36  [36mINFO    [0m  [38;5;245mtandurbot[0m  Memulai pemuatan model RAG...
+2026-07-22 12:03:36  [36mINFO    [0m  [38;5;245mtandurbot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-07-22 12:03:36  [36mINFO    [0m  [38;5;245mtandurbot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-07-22 12:04:10  [36mINFO    [0m  [38;5;245mtandurbot[0m  [1/4] Embedding siap  (33.83s)
+2026-07-22 12:04:10  [36mINFO    [0m  [38;5;245mtandurbot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-07-22 12:04:50  [36mINFO    [0m  [38;5;245mtandurbot[0m  [2/4] Reranker siap  (40.02s)
+2026-07-22 12:04:50  [36mINFO    [0m  [38;5;245mtandurbot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-07-22 12:04:50  [36mINFO    [0m  [38;5;245mtandurbot[0m  [3/4] Groq client siap.
+2026-07-22 12:04:50  [36mINFO    [0m  [38;5;245mtandurbot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-07-22 12:04:57  [36mINFO    [0m  [38;5;245mtandurbot[0m  [4/4] NLP siap  (7.20s)
+2026-07-22 12:04:57  [36mINFO    [0m  [38;5;245mtandurbot[0m  ✓ Semua model berhasil dimuat.
+2026-07-23 10:02:14  [36mINFO    [0m  [38;5;245mtandurbot[0m  Memulai pemuatan model RAG...
+2026-07-23 10:02:14  [36mINFO    [0m  [38;5;245mtandurbot[0m  Placement: embedding=cuda  reranker=cuda  nlp=cuda  llm=groq-api(llama-3.3-70b-versatile)
+2026-07-23 10:02:14  [36mINFO    [0m  [38;5;245mtandurbot[0m  [1/4] Embedding: intfloat/multilingual-e5-large → cuda
+2026-07-23 10:02:30  [36mINFO    [0m  [38;5;245mtandurbot[0m  [1/4] Embedding siap  (16.17s)
+2026-07-23 10:02:30  [36mINFO    [0m  [38;5;245mtandurbot[0m  [2/4] Reranker: BAAI/bge-reranker-v2-m3 → cuda
+2026-07-23 10:02:45  [36mINFO    [0m  [38;5;245mtandurbot[0m  [2/4] Reranker siap  (14.57s)
+2026-07-23 10:02:45  [36mINFO    [0m  [38;5;245mtandurbot[0m  [3/4] Groq API client → model=llama-3.3-70b-versatile
+2026-07-23 10:02:45  [36mINFO    [0m  [38;5;245mtandurbot[0m  [3/4] Groq client siap.
+2026-07-23 10:02:45  [36mINFO    [0m  [38;5;245mtandurbot[0m  [4/4] Memuat NLP: IndoBERT (ID) & BERT-NER (EN)...
+2026-07-23 10:02:56  [36mINFO    [0m  [38;5;245mtandurbot[0m  [4/4] NLP siap  (11.40s)
+2026-07-23 10:02:56  [36mINFO    [0m  [38;5;245mtandurbot[0m  ✓ Semua model berhasil dimuat.
