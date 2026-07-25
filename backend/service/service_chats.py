@@ -789,7 +789,7 @@ class KnowledgeService:
     """
 
     # Sesuai CONFIG["dataset_path"] di embedder.py
-    DATASET_DIR = "../dataset"
+    DATASET_DIR = "../uploaded_datasets"
 
     @staticmethod
     def upload_pdf(
@@ -803,7 +803,7 @@ class KnowledgeService:
         embedder_type: str = "improved",
     ) -> dict:
         """
-        Simpan PDF ke ./dataset/ lalu jalankan embedder di background thread.
+        Simpan PDF lalu jalankan embedder di background thread.
 
         Parameters:
           file_bytes     : konten file PDF sebagai bytes (sudah dibaca oleh controller)

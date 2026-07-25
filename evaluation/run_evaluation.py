@@ -33,9 +33,9 @@ def main():
     results = evaluator.run_full_evaluation(
         test_dataset_path="test_dataset.json",
         output_dir="output",
-        skip_embedder=True,
+        skip_embedder=False,
         skip_rag=True,
-        skip_llm=False
+        skip_llm=True
     )
 
     print("\n[4] Summary:")
