@@ -8,6 +8,7 @@ import json
 import os
 import re
 import sys
+from matplotlib import gridspec
 import numpy as np
 from typing import List, Dict, Optional, Tuple, Any
 from dataclasses import dataclass, asdict
@@ -246,52 +247,43 @@ class RAGEvaluator:
         
         return results
     
-    def evaluate_speed(
-        self,
-        test_queries: List[str],
-        num_runs: int = 3
-    ) -> Dict:
-        """
-        Evaluasi kecepatan generation (end-to-end).
-        
-        Returns:
-            Dict dengan statistik waktu per komponen
-        """
-        timing_stats = {
-            "total_times": [],
-            "retrieval_times": [],
-            "enrichment_times": [],
-            "rerank_times": [],
-            "generation_times": [],
-            "memory_times": []
-        }
-        
+    def evaluate_speed(self, test_queries: List[str], num_runs: int = 1, use_raw: bool = False) -> Dict:
+        timing_stats = {"total_times": [], "retrieval_times": [], "enrichment_times": [],
+                        "rerank_times": [], "generation_times": [], "memory_times": []}
+
         for query in test_queries:
             for _ in range(num_runs):
-                # Measure with detailed timing
                 t_start = time.perf_counter()
-                
-                # Retrieval
-                t1 = time.perf_counter()
-                query_emb = self.models.get_embedding(query)
-                candidates = self.pipeline.chroma.retrieve(query_emb, k=12)
-                timing_stats["retrieval_times"].append(time.perf_counter() - t1)
-                
-                # Enrichment
-                t2 = time.perf_counter()
-                enriched = self.pipeline.neo4j.enrich(candidates, context_window=1)
-                timing_stats["enrichment_times"].append(time.perf_counter() - t2)
-                
-                # Reranking
-                t3 = time.perf_counter()
-                scores = self.models.rerank(query, [c.context_text for c in enriched])
-                timing_stats["rerank_times"].append(time.perf_counter() - t3)
-                
-                # Generation (simulasi small generation)
-                t4 = time.perf_counter()
-                # Just a small test generation
-                timing_stats["generation_times"].append(0.5)  # Placeholder
-                
+
+                if use_raw:
+                    # Jalur RAW asli: raw_collection, TANPA neo4j enrich
+                    t1 = time.perf_counter()
+                    query_emb = self.models.get_embedding(query)
+                    raw_collection = self.pipeline.chroma.client.get_collection(CONFIG["raw_collection"])
+                    raw_results = raw_collection.query(query_embeddings=[query_emb], n_results=12,
+                                                        include=["documents"])
+                    timing_stats["retrieval_times"].append(time.perf_counter() - t1)
+                    timing_stats["enrichment_times"].append(0.0)  # Raw tidak enrich
+
+                    t3 = time.perf_counter()
+                    texts = raw_results["documents"][0]
+                    scores = self.models.rerank(query, texts)
+                    timing_stats["rerank_times"].append(time.perf_counter() - t3)
+                else:
+                    # Jalur GRAPH asli: chroma.retrieve() + neo4j.enrich()
+                    t1 = time.perf_counter()
+                    query_emb = self.models.get_embedding(query)
+                    candidates = self.pipeline.chroma.retrieve(query_emb, k=12)
+                    timing_stats["retrieval_times"].append(time.perf_counter() - t1)
+
+                    t2 = time.perf_counter()
+                    enriched = self.pipeline.neo4j.enrich(candidates, context_window=1)
+                    timing_stats["enrichment_times"].append(time.perf_counter() - t2)
+
+                    t3 = time.perf_counter()
+                    scores = self.models.rerank(query, [c.context_text for c in enriched])
+                    timing_stats["rerank_times"].append(time.perf_counter() - t3)
+
                 timing_stats["total_times"].append(time.perf_counter() - t_start)
         
         return {
@@ -473,9 +465,22 @@ class RAGEvaluator:
         return any(indicator in sentence.lower() for indicator in causal_indicators)
     
     def _causal_element_in_answer(self, element: str, answer: str) -> bool:
-        """Cek apakah causal element muncul di answer."""
-        return element.lower() in answer.lower()
-    
+        """Cek apakah causal element (cause → effect) tercermin di answer,
+        memakai similarity semantik — konsisten dengan verifikasi faithfulness
+        di _verify_claim_against_chunks()."""
+        if not answer:
+            return False
+
+        # Ganti notasi panah jadi kalimat natural, supaya cross-encoder
+        # (dilatih pada teks natural) bisa menilai similarity dengan baik.
+        element_text = element.replace('→', ' menyebabkan ').strip()
+        if not element_text:
+            return False
+
+        scores = self.models.rerank(element_text, [answer])
+        threshold = 0.4  # konsisten dengan threshold di _verify_claim_against_chunks
+        return scores[0] >= threshold if scores else False
+        
     def _calculate_causal_depth(self, answer: str) -> int:
         """Hitung kedalaman rantai sebab-akibat dalam jawaban."""
         # Cari pola sebab → akibat yang berantai
@@ -622,8 +627,9 @@ class RAGEvaluator:
         - RAG Quality Scores (Faithfulness, Completeness, Relevance)
         - Pipeline Component Latency (Retrieval, Rerank, Generation)
         """
+        import matplotlib
+        matplotlib.use('Agg')  # backend non-interaktif, tidak butuh Tk/Tcl
         import matplotlib.pyplot as plt
-        import matplotlib.gridspec as gridspec
 
         plt.style.use('seaborn-v0_8-darkgrid')
         fig = plt.figure(figsize=(14, 6))

@@ -155,15 +155,41 @@ class EmbedderEvaluator:
         }
     
     def _count_entities(self, text: str) -> int:
-        """Hitung jumlah entitas (NER) dalam teks."""
+        if not text:
+            return 0
         try:
-            # Gunakan NER pipeline yang sudah ada
-            entities = self.models.nlp_en_pipeline(text[:512])
-            # Filter by score threshold
-            high_confidence = [e for e in entities if e.get("score", 0) >= 0.7]
-            return len(high_confidence)
+            segment_char_budget = 1800
+            segments = [
+                text[i:i + segment_char_budget]
+                for i in range(0, len(text), segment_char_budget)
+                if text[i:i + segment_char_budget].strip()
+            ]
+            if not segments:
+                return 0
+
+            # Kirim semua segmen sekaligus dalam satu panggilan (batch),
+            # bukan satu-satu — jauh lebih efisien di GPU dan menghilangkan
+            # warning "pipelines sequentially on GPU".
+            batched_results = self.models.nlp_en_pipeline(segments)
+
+            # Output untuk input list adalah list of list (satu list entitas
+            # per segmen) — gabungkan semuanya jadi satu list datar.
+            all_entities = [
+                entity
+                for segment_entities in batched_results
+                for entity in segment_entities
+            ]
+
+            high_confidence = [e for e in all_entities if e.get("score", 0) >= 0.7]
+
+            unique_entities = {
+                e.get("word", "").strip().lower()
+                for e in high_confidence
+                if e.get("word", "").strip()
+            }
+
+            return len(unique_entities)
         except Exception:
-            # Fallback: hitung proper nouns
             import re
             proper_nouns = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', text)
             return len(set(proper_nouns))
@@ -177,18 +203,12 @@ class EmbedderEvaluator:
     # ── Visualisasi ───────────────────────────────────────────────────────────
 
     def plot_metrics(
-        self,
-        graph_vs_raw_metrics: Dict,
-        save_path: str = None
+    self,
+    graph_vs_raw_metrics: Dict,
+    save_path: str = None
     ):
-        """
-        Tampilkan bar chart untuk graph vs raw metrics.
-        
-        3 panel:
-        - Context length
-        - Entity coverage  
-        - Query-Context similarity
-        """
+        import matplotlib
+        matplotlib.use('Agg')  # backend non-interaktif, tidak butuh Tk/Tcl
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
 

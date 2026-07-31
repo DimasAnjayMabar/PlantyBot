@@ -33,8 +33,8 @@ def main():
     results = evaluator.run_full_evaluation(
         test_dataset_path="test_dataset.json",
         output_dir="output",
-        skip_embedder=False,
-        skip_rag=True,
+        skip_embedder=True,
+        skip_rag=False,
         skip_llm=True
     )
 

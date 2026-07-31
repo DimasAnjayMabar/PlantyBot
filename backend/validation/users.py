@@ -1,7 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from typing import List
 
-
 # --- 1. REGISTRASI ---
 class RegisterSchema(BaseModel):
     username: str = Field(..., min_length=3, max_length=50, example="petanikeren")

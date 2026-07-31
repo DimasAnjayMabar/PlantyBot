@@ -2,7 +2,7 @@
   "metadata": {
     "version": "1.0",
     "created_date": "2024-01-15",
-    "description": "Test dataset untuk evaluasi RAG pipeline - diperbarui dengan 11 dokumen lengkap (penyakit dan hama kentang, cabai, jagung)",
+    "description": "Test dataset untuk evaluasi RAG pipeline - diperbarui dengan 11 dokumen lengkap dan 20 RAG queries yang berkorelasi dengan causal ground truth",
     "documents_used": [
       "1_penyakit_kentang.pdf",
       "2_penyakit_daun_kentang.pdf",
@@ -16,7 +16,7 @@
       "10_penyakit_jagung.pdf",
       "11_penyakit_jagung.pdf"
     ],
-    "note": "RAW RAG dan IMPROVED RAG sekarang menggunakan 11 dokumen yang sama"
+    "note": "RAW RAG dan IMPROVED RAG menggunakan 11 dokumen yang sama"
   },
 
   "=================== UNTUK EMBEDDER ===================": {},
@@ -169,71 +169,255 @@
       "question": "Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya!",
       "gold_answer": "Empat jenis bakteri penyebab penyakit pada umbi kentang adalah: 1) Clavibacter michiganensis penyebab busuk cincin bakteri, 2) Erwinia carotovora penyebab busuk lunak bakteri, 3) Streptomyces scabies penyebab kudis bakteri, dan 4) Ralstonia solanacearum penyebab busuk coklat. Cara penanggulangannya meliputi pemilihan bibit sehat, memusnahkan tanaman terinfeksi, sterilisasi alat, dan rotasi tanaman.",
       "expected_keywords": ["Clavibacter", "Erwinia", "Streptomyces", "Ralstonia", "busuk cincin", "busuk lunak", "kudis", "busuk coklat", "bibit sehat", "rotasi tanaman"],
-      "expected_causal_relations": [],
+      "expected_causal_relations": [
+        "Clavibacter michiganensis → busuk cincin bakteri",
+        "Erwinia carotovora → busuk lunak bakteri",
+        "Streptomyces scabies → kudis bakteri",
+        "Ralstonia solanacearum → busuk coklat",
+        "bibit sehat → mencegah infeksi bakteri"
+      ],
       "source_doc": "1_penyakit_kentang.pdf"
     },
     {
       "question": "Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya?",
       "gold_answer": "Penyakit layu fusarium pada cabai disebabkan oleh cendawan Fusarium oxysporum f.sp. Gejalanya berupa daun layu mulai dari bagian bawah, menguning, dan menjalar ke atas. Pengendalian dapat dilakukan dengan sanitasi mencabut tanaman terserang, memanfaatkan agen antagonis Trichoderma spp., serta penggunaan fungisida sebagai alternatif terakhir.",
       "expected_keywords": ["Fusarium oxysporum", "layu", "menguning", "sanitasi", "Trichoderma", "fungisida"],
-      "expected_causal_relations": ["Fusarium oxysporum → layu fusarium", "layu fusarium → daun menguning"],
+      "expected_causal_relations": [
+        "Fusarium oxysporum → layu fusarium",
+        "layu fusarium → daun menguning",
+        "Trichoderma spp. → menekan Fusarium",
+        "sanitasi → mengurangi sumber infeksi"
+      ],
       "source_doc": "5_hama_cabai.pdf"
     },
     {
       "question": "Apa saja hama utama pada tanaman cabai rawit dan bagaimana intensitas serangannya?",
       "gold_answer": "Hama utama pada tanaman cabai rawit adalah Pseudococcus sp. (kutu putih) dan Bemisia tabaci (kutu kebul) yang mendominasi populasi hama. Intensitas serangan rata-rata mencapai 6.537% yang tergolong serangan tingkat ringan. Indeks keanekaragaman hama tergolong rendah (0.92) yang menunjukkan komunitas didominasi oleh beberapa spesies saja.",
       "expected_keywords": ["Pseudococcus", "Bemisia tabaci", "kutu putih", "kutu kebul", "6.537%", "ringan", "indeks keanekaragaman", "0.92"],
-      "expected_causal_relations": ["dominasi Pseudococcus → indeks keanekaragaman rendah"],
+      "expected_causal_relations": [
+        "dominasi Pseudococcus sp. → indeks keanekaragaman rendah",
+        "dominasi Bemisia tabaci → indeks keanekaragaman rendah",
+        "populasi hama tinggi → intensitas serangan 6.537%"
+      ],
       "source_doc": "6_hama_cabai.pdf"
     },
     {
       "question": "Bagaimana gejala dan pengendalian penyakit busuk daun kentang yang disebabkan Phytophthora infestans?",
       "gold_answer": "Gejala awal penyakit busuk daun kentang berupa bercak basah pada tepi atau tengah daun, kemudian melebar menjadi coklat/abu-abu dengan massa sporangium putih seperti tepung. Pada umbi muncul bercak coklat atau hitam keunguan. Pengendalian meliputi sanitasi, penggunaan bibit sehat, pencelupan umbi dalam larutan Pseudomonas fluorescens, pengaturan waktu tanam, penggunaan varietas tahan, dan aplikasi fungisida seperti mankozeb, propineb, atau kaptafol secara bergilir.",
       "expected_keywords": ["Phytophthora infestans", "bercak basah", "sporangium", "zoosporangia", "sanitasi", "Pseudomonas fluorescens", "mankozeb", "propineb"],
-      "expected_causal_relations": ["P. infestans → bercak basah pada daun", "spora P. infestans → infeksi umbi"],
+      "expected_causal_relations": [
+        "Phytophthora infestans → bercak basah pada daun",
+        "spora P. infestans → infeksi umbi",
+        "Pseudomonas fluorescens → menghambat P. infestans",
+        "sanitasi → mengurangi sumber infeksi"
+      ],
       "source_doc": "2_penyakit_daun_kentang.pdf"
     },
     {
       "question": "Apa saja jenis serangga hama yang menyerang tanaman kentang dan mana yang populasinya tertinggi?",
       "gold_answer": "Delapan jenis serangga hama ditemukan pada tanaman kentang: Empoasca sp. (109,03 ekor), Drosophila sp. (37,03 ekor), Nesidiocoris sp. (34,11 ekor), Liriomyza sp. (10,72 ekor), Lygus sp. (4,47 ekor), Phthorimaea sp. (2,97 ekor), Antractomorpha sp. (1,61 ekor), dan Epilachna sp. (0,69 ekor). Populasi tertinggi adalah Empoasca sp. yang merupakan hama dari ordo Hemiptera famili Cicadelidae.",
       "expected_keywords": ["Empoasca", "Drosophila", "Nesidiocoris", "Liriomyza", "Lygus", "Phthorimaea", "Antractomorpha", "Epilachna", "109,03", "populasi tertinggi"],
-      "expected_causal_relations": [],
+      "expected_causal_relations": [
+        "Empoasca sp. dominan → populasi tertinggi",
+        "Empoasca sp. → klorosis pada daun",
+        "populasi tinggi → kerusakan tanaman"
+      ],
       "source_doc": "3_hama_kentang_2.pdf"
     },
     {
       "question": "Jelaskan penyakit utama pada jagung yang disebabkan oleh jamur dan cara pengendaliannya!",
       "gold_answer": "Penyakit utama jagung yang disebabkan jamur antara lain: 1) Bulai (Peronosclerospora sp.) dengan gejala garis putih/kuning pada daun, dikendalikan dengan varietas tahan, eradikasi, dan fungisida metalaksil; 2) Hawar daun (Helminthosporium sp.) dengan bercak coklat memanjang, dikendalikan dengan varietas tahan dan fungisida; 3) Karat daun (Puccinia sp.) dengan bercak coklat kemerahan, dikendalikan dengan sanitasi dan varietas tahan; 4) Gosong bengkak (Ustilago maydis) menyebabkan tongkol membengkak, dikendalikan dengan perlakuan benih dan pembakaran tanaman terinfeksi.",
       "expected_keywords": ["bulai", "Peronosclerospora", "hawar daun", "Helminthosporium", "karat daun", "Puccinia", "gosong bengkak", "Ustilago", "metalaksil", "varietas tahan"],
-      "expected_causal_relations": [],
+      "expected_causal_relations": [
+        "Peronosclerospora sp. → bulai jagung",
+        "Helminthosporium sp. → hawar daun",
+        "Puccinia sp. → karat daun",
+        "Ustilago maydis → gosong bengkak",
+        "varietas tahan → menekan infeksi jamur"
+      ],
       "source_doc": "7_penyakit_jagung.pdf"
     },
     {
       "question": "Apa perbedaan antara hama Spodoptera frugiperda dan Spodoptera litura pada tanaman jagung?",
       "gold_answer": "Perbedaan utama: Spodoptera frugiperda (ulat grayak jagung) memiliki ciri khas pada kepala terdapat corak huruf Y terbalik dan 4 bintik hitam besar pada abdomen, merupakan hama invasif yang masuk Indonesia tahun 2019. Spodoptera litura memiliki ciri berbeda tanpa corak Y terbalik. Keduanya merusak dengan memakan daun hingga tersisa tulang daun, namun S. frugiperda juga menyerang tongkol dan titik tumbuh.",
       "expected_keywords": ["Spodoptera frugiperda", "Spodoptera litura", "Y terbalik", "4 bintik hitam", "invasif", "2019", "tulang daun"],
-      "expected_causal_relations": [],
+      "expected_causal_relations": [
+        "S. frugiperda → hama invasif",
+        "S. frugiperda → serangan tongkol dan titik tumbuh",
+        "S. litura → memakan daun hingga tulang daun"
+      ],
       "source_doc": "9_penyakit_jagung.pdf"
     },
     {
       "question": "Bagaimana strategi pengendalian hama terpadu untuk tanaman cabai?",
       "gold_answer": "Strategi PHT cabai meliputi: 1) Kultur teknis: rotasi tanaman, sanitasi lahan, penggunaan mulsa perak, tumpangsari, pengaturan jarak tanam; 2) Penggunaan varietas tahan; 3) Pemanfaatan musuh alami seperti predator Coccinellidae dan parasitoid; 4) Perangkap kuning untuk thrips dan lalat buah; 5) Penggunaan pestisida selektif sebagai alternatif terakhir dengan dosis tepat dan bergilir untuk menghindari resistensi.",
       "expected_keywords": ["PHT", "rotasi", "sanitasi", "mulsa perak", "musuh alami", "parasitoid", "predator", "perangkap kuning", "pestisida selektif"],
-      "expected_causal_relations": ["musuh alami → menekan populasi hama", "rotasi tanaman → mengurangi patogen tanah"],
+      "expected_causal_relations": [
+        "musuh alami → menekan populasi hama",
+        "rotasi tanaman → mengurangi patogen tanah",
+        "mulsa perak → mengurangi vektor virus",
+        "perangkap kuning → menangkap thrips"
+      ],
       "source_doc": "5_hama_cabai.pdf"
     },
     {
       "question": "Apa saja penyakit pada tanaman cabai berdasarkan fase pertumbuhan dan patogen penyebabnya?",
       "gold_answer": "Berdasarkan fase pertumbuhan: 1) Terbawa biji: Xanthomonas campestris (bakteri), Colletotrichum spp. (cendawan), TMV/CMV (virus); 2) Persemaian: Ralstonia solanacearum (layu bakteri), Rhizoctonia/Pythium (rebah kecambah), Meloidogyne (nematoda), PVY/CMV (virus); 3) Vegetatif-Generatif: Xcv (bercak bakteri), Ralstonia (layu bakteri), Colletotrichum (antraknos), Phytophthora (busuk fitoftora), Fusarium (layu fusarium), virus mosaik; 4) Buah: Erwinia (busuk basah), Colletotrichum (antraknos), CMV (mosaik belang).",
       "expected_keywords": ["Xanthomonas", "Colletotrichum", "Ralstonia", "Phytophthora", "Fusarium", "Erwinia", "TMV", "CMV", "terbawa biji", "persemaian"],
-      "expected_causal_relations": [],
+      "expected_causal_relations": [
+        "Colletotrichum spp. → antraknos",
+        "Ralstonia solanacearum → layu bakteri",
+        "Phytophthora capsici → busuk fitoftora",
+        "Xanthomonas → bercak bakteri"
+      ],
       "source_doc": "4_penyakit_cabai.pdf"
     },
     {
       "question": "Bagaimana cara mengendalikan hama penggerek batang dan penggerek tongkol pada jagung?",
       "gold_answer": "Pengendalian penggerek batang (Ostrinia furnacalis): tumpangsari dengan kedelai/kacang tanah, pemotongan bunga jantan, insektisida monokrotofos/triazofos/karbofuran. Pengendalian penggerek tongkol (Helicoverpa armigera): pengelolaan tanah untuk merusak pupa, penyemprotan insektisida setelah rambut jagung terbentuk dengan selang 1-2 hari hingga rambut berwarna coklat, insektisida berbahan aktif deltametrin.",
       "expected_keywords": ["Ostrinia furnacalis", "Helicoverpa armigera", "tumpangsari", "monokrotofos", "deltametrin", "pupa", "rambut jagung"],
-      "expected_causal_relations": [],
+      "expected_causal_relations": [
+        "Ostrinia furnacalis → penggerek batang",
+        "Helicoverpa armigera → penggerek tongkol",
+        "tumpangsari → mengurangi serangan O. furnacalis",
+        "pengelolaan tanah → merusak pupa H. armigera"
+      ],
       "source_doc": "9_penyakit_jagung.pdf"
+    },
+    {
+      "question": "Bagaimana cara mengendalikan hama thrips pada tanaman cabai?",
+      "gold_answer": "Pengendalian thrips pada cabai dapat dilakukan dengan: menggunakan tanaman perangkap kenikir kuning, mulsa perak, sanitasi lingkungan dan pemotongan bagian tanaman terserang, perangkap warna kuning sebanyak 40 buah/ha, pemanfaatan musuh alami seperti kumbang Coccinellidae dan patogen Entomophthora sp., serta pestisida apabila populasi mencapai ambang pengendalian (>15% per tanaman contoh).",
+      "expected_keywords": ["kenikir", "mulsa perak", "sanitasi", "perangkap kuning", "Coccinellidae", "Entomophthora", "15%", "ambang pengendalian"],
+      "expected_causal_relations": [
+        "perangkap kuning → menangkap thrips",
+        "mulsa perak → mengurangi populasi thrips",
+        "musuh alami → menekan populasi thrips"
+      ],
+      "source_doc": "5_hama_cabai.pdf"
+    },
+    {
+      "question": "Apa penyebab penyakit layu bakteri pada cabai dan bagaimana penanggulangannya?",
+      "gold_answer": "Penyakit layu bakteri pada cabai disebabkan oleh Ralstonia solanacearum. Gejala: daun layu dari bagian bawah, jaringan vaskuler batang bawah dan akar kecoklatan, bila batang dipotong dan dicelupkan air keluar cairan keruh seperti kepulan asap. Penanggulangan: pergiliran tanaman, penggunaan benih sehat, sanitasi mencabut tanaman sakit, agen antagonis Trichoderma/Gliocladium, dan bakterisida sebagai alternatif terakhir.",
+      "expected_keywords": ["Ralstonia solanacearum", "layu", "vaskuler coklat", "kepulan asap", "pergiliran", "Trichoderma", "Gliocladium"],
+      "expected_causal_relations": [
+        "Ralstonia solanacearum → layu bakteri",
+        "R. solanacearum → vaskuler coklat",
+        "Trichoderma → menekan R. solanacearum"
+      ],
+      "source_doc": "5_hama_cabai.pdf"
+    },
+    {
+      "question": "Apa gejala dan pengendalian penyakit kudis bakteri pada kentang?",
+      "gold_answer": "Penyakit kudis bakteri disebabkan oleh Streptomyces scabies. Gejala: permukaan umbi bertekstur menonjol dan bersisik, lentisel berkurang dan keras, pembengkakan menimbulkan bisul bergabus. Bila umbi dibelah terlihat bercak kemerahan dan kecoklatan. Pengendalian: rotasi tanaman untuk mempertahankan kelembaban dan pH tanah (<6,5-8,0), karena Streptomyces tidak tahan pH rendah sedangkan kentang tumbuh pada pH 5.",
+      "expected_keywords": ["Streptomyces scabies", "kudis", "menonjol", "bersisik", "bisul", "rotasi tanaman", "pH", "kelembaban"],
+      "expected_causal_relations": [
+        "Streptomyces scabies → kudis bakteri",
+        "pH rendah → menghambat S. scabies",
+        "rotasi tanaman → mengurangi S. scabies"
+      ],
+      "source_doc": "1_penyakit_kentang.pdf"
+    },
+    {
+      "question": "Bagaimana cara mengendalikan hama lalat buah pada tanaman cabai?",
+      "gold_answer": "Pengendalian lalat buah (Bactrocera sp.) pada cabai: pemusnahan buah terserang, pembungkusan buah, penggunaan perangkap atraktan metil eugenol (ME) 1 ml/perangkap dengan 40 perangkap/ha dipasang sejak umur 2 minggu sampai panen, rotasi tanaman, pemanfaatan musuh alami parasitoid Biosteres/Opius dan predator semut/laba-laba, serta pestisida sebagai alternatif terakhir.",
+      "expected_keywords": ["Bactrocera", "metil eugenol", "perangkap", "atraktan", "Biosteres", "Opius", "pemusnahan buah", "rotasi"],
+      "expected_causal_relations": [
+        "metil eugenol → menarik lalat buah",
+        "perangkap atraktan → menangkap lalat buah",
+        "pemusnahan buah → mengurangi sumber infeksi"
+      ],
+      "source_doc": "5_hama_cabai.pdf"
+    },
+    {
+      "question": "Apa yang dimaksud dengan hama invasif pada jagung dan berikan contohnya?",
+      "gold_answer": "Hama invasif adalah hama baru yang memasuki wilayah Indonesia dan dapat menimbulkan ancaman bagi ekosistem, lingkungan, dan ekonomi. Contohnya adalah ulat grayak jagung (Spodoptera frugiperda) yang masuk Indonesia sejak awal tahun 2019. Hama ini menyerang daun, batang, dan tongkol jagung serta dapat menyerang padi, sorgum, tebu, kedelai, tomat, dan kentang. Ciri khasnya adalah corak huruf Y terbalik pada kepala dan 4 bintik hitam pada abdomen.",
+      "expected_keywords": ["invasif", "Spodoptera frugiperda", "2019", "Y terbalik", "4 bintik hitam", "ekosistem", "ekonomi"],
+      "expected_causal_relations": [
+        "S. frugiperda masuk 2019 → hama invasif",
+        "S. frugiperda → ancaman ekosistem dan ekonomi"
+      ],
+      "source_doc": "9_penyakit_jagung.pdf"
+    },
+    {
+      "question": "Bagaimana cara mengendalikan penyakit bulai pada jagung secara efektif?",
+      "gold_answer": "Pengendalian bulai pada jagung: 1) Periode bebas tanaman jagung minimal 2 minggu-1 bulan; 2) Tanam serempak; 3) Eradikasi tanaman terserang; 4) Menanam varietas tahan (Sukmaraga, Lamuru, Gumarang, Bima 2, Bima 3); 5) Perlakuan benih dengan fungisida metalaksil dosis 2g/kg benih.",
+      "expected_keywords": ["bulai", "Peronosclerospora", "metalaksil", "varietas tahan", "eradikasi", "tanam serempak", "Sukmaraga", "Lamuru", "Gumarang"],
+      "expected_causal_relations": [
+        "Peronosclerospora → bulai jagung",
+        "metalaksil → menghambat Peronosclerospora",
+        "varietas tahan → resistensi bulai",
+        "eradikasi → mengurangi sumber infeksi"
+      ],
+      "source_doc": "7_penyakit_jagung.pdf"
+    },
+    {
+      "question": "Apa gejala dan pengendalian penyakit karat daun pada jagung?",
+      "gold_answer": "Gejala karat daun (Puccinia polysora): bercak-bercak kecil coklat kemerahan pada permukaan atas dan bawah daun berbentuk bulat/oval, berkembang cepat pada kelembaban tinggi. Pengendalian: varietas tahan, sanitasi gulma untuk mengurangi kelembaban mikro, rotasi tanaman, dan fungisida bila diperlukan.",
+      "expected_keywords": ["Puccinia polysora", "karat daun", "bercak coklat kemerahan", "pustule", "urediospora", "kelembaban", "sanitasi", "varietas tahan"],
+      "expected_causal_relations": [
+        "Puccinia polysora → karat daun",
+        "kelembaban tinggi → perkembangan cepat",
+        "sanitasi gulma → mengurangi kelembaban mikro",
+        "varietas tahan → resistensi karat"
+      ],
+      "source_doc": "11_penyakit_jagung.pdf"
+    },
+    {
+      "question": "Bagaimana cara mengendalikan hama Empoasca sp. pada tanaman kentang?",
+      "gold_answer": "Empoasca sp. adalah hama utama kentang dengan populasi tertinggi. Pengendalian dapat dilakukan dengan: sanitasi lahan dari gulma, penggunaan insektisida secara bijaksana, pemanfaatan musuh alami predator, dan pengaturan waktu tanam. Serangan ringan ditandai klorosis pada tulang daun, serangan sedang pinggiran daun mengeriting, serangan berat daun kuning dan mati.",
+      "expected_keywords": ["Empoasca", "klorosis", "mengeriting", "sanitasi", "insektisida", "musuh alami", "predator"],
+      "expected_causal_relations": [
+        "Empoasca sp. → klorosis daun",
+        "serangan berat → kematian tanaman"
+      ],
+      "source_doc": "3_hama_kentang_2.pdf"
+    },
+    {
+      "question": "Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai?",
+      "gold_answer": "Predator adalah organisme yang mengendalikan serangga hama secara langsung dan kontak fisik, memangsa banyak inang, contoh: Coccinella transversalis, Paederus littoralis, laba-laba. Parasitoid adalah musuh alami yang merusak siklus hidup hama dengan menjadikan serangga hama sebagai inang untuk bertahan hidup, hanya menggunakan 1 inang, contoh: Scelio sp., Brachymeria podagrica, Ripiphorus spp.",
+      "expected_keywords": ["predator", "parasitoid", "kontak fisik", "1 inang", "Coccinella", "Scelio", "Brachymeria", "Paederus"],
+      "expected_causal_relations": [
+        "predator → kontak fisik langsung",
+        "parasitoid → telur di dalam inang",
+        "larva parasitoid → memakan inang dari dalam",
+        "keduanya → menekan populasi hama"
+      ],
+      "source_doc": "6_hama_cabai.pdf"
+    },
+    {
+      "question": "Bagaimana gejala serangan thrips pada tanaman cabai?",
+      "gold_answer": "Gejala serangan thrips: bercak keperakan pada permukaan bawah daun, daun berubah warna menjadi coklat tembaga, mengeriting/keriput dan akhirnya mati. Serangan berat menyebabkan daun/tunas/pucuk menggulung ke dalam, muncul benjolan seperti tumor, pertumbuhan terhambat dan kerdil, pucuk mati. Thrips juga vektor virus mosaik dan virus keriting.",
+      "expected_keywords": ["thrips", "keperakan", "coklat tembaga", "mengeriting", "keriput", "tumor", "kerdil", "vektor virus", "mosaik"],
+      "expected_causal_relations": [
+        "thrips menghisap cairan daun → bercak keperakan",
+        "thrips → daun mengeriting dan keriput",
+        "serangan berat → pertumbuhan kerdil",
+        "thrips sebagai vektor → virus mosaik"
+      ],
+      "source_doc": "5_hama_cabai.pdf"
+    },
+    {
+      "question": "Apa penyebab penyakit busuk lunak bakteri pada kentang dan bagaimana penanggulangannya?",
+      "gold_answer": "Penyakit busuk lunak bakteri disebabkan oleh Erwinia carotovora. Gejala: pembusukan pada ujung stolon umbi muda, terdapat lendir bila umbi dibelah. Faktor utama penyebaran adalah kelembaban udara tinggi. Penanggulangan: agen hayati Bacillus subtilis dan Pseudomonas fluorescens secara kombinasi untuk uji antagonisme yang mampu mengendalikan busuk lunak umbi kentang.",
+      "expected_keywords": ["Erwinia carotovora", "busuk lunak", "lendir", "stolon", "Bacillus subtilis", "Pseudomonas fluorescens", "agens hayati", "kelembaban"],
+      "expected_causal_relations": [
+        "Erwinia carotovora → busuk lunak",
+        "kelembaban tinggi → penyebaran cepat",
+        "Bacillus subtilis → antagonis Erwinia",
+        "Pseudomonas fluorescens → antagonis Erwinia"
+      ],
+      "source_doc": "1_penyakit_kentang.pdf"
+    },
+    {
+      "question": "Bagaimana cara mengendalikan hama kutu kebul (Bemisia tabaci) pada tanaman cabai?",
+      "gold_answer": "Pengendalian kutu kebul: pemanfaatan musuh alami predator Menochilus sexmaculatus (200-400 larva/hari), parasitoid Encarcia adrianae, patogen Bacillus thuringiensis; perangkap kuning; sanitasi lingkungan; tumpangsari dengan Tagetes; rotasi tanaman; pestisida selektif Permethrin, Amitraz, Imidacloprid, Bifenthrin, Buprofezin sebagai alternatif terakhir.",
+      "expected_keywords": ["Bemisia tabaci", "Menochilus sexmaculatus", "Encarcia", "Bacillus thuringiensis", "perangkap kuning", "Tagetes", "Imidacloprid", "Buprofezin"],
+      "expected_causal_relations": [
+        "Menochilus sexmaculatus → memangsa B. tabaci",
+        "Encarcia → parasitoid B. tabaci",
+        "perangkap kuning → menangkap B. tabaci"
+      ],
+      "source_doc": "5_hama_cabai.pdf"
     }
   ],
 
@@ -246,7 +430,11 @@
     "Apa gejala penyakit busuk daun kentang dan bagaimana penanggulangannya?",
     "Jelaskan hama utama pada tanaman kentang dan cara pengendaliannya",
     "Apa perbedaan penyakit hawar daun dan karat daun pada jagung?",
-    "Sebutkan jenis-jenis penyakit pada cabai berdasarkan patogennya"
+    "Sebutkan jenis-jenis penyakit pada cabai berdasarkan patogennya",
+    "Bagaimana cara mengendalikan hama thrips pada cabai?",
+    "Apa penyebab dan gejala penyakit layu bakteri pada cabai?",
+    "Bagaimana cara mengendalikan hama penggerek batang jagung?",
+    "Apa yang dimaksud dengan hama invasif pada jagung?"
   ],
 
   "=================== UNTUK COMPLIANCE TESTS ===================": {},
@@ -312,6 +500,13 @@
 
   "=================== UNTUK CAUSAL GROUND TRUTH ===================": {},
   "causal_ground_truth": {
+    "Jelaskan 4 jenis bakteri penyebab penyakit pada umbi kentang dan cara penanggulangannya!": [
+      "Clavibacter michiganensis → busuk cincin bakteri",
+      "Erwinia carotovora → busuk lunak bakteri",
+      "Streptomyces scabies → kudis bakteri",
+      "Ralstonia solanacearum → busuk coklat",
+      "bibit sehat → mencegah infeksi bakteri"
+    ],
     "Apa penyebab penyakit layu fusarium pada tanaman cabai dan bagaimana pengendaliannya?": [
       "Fusarium oxysporum → infeksi tanaman",
       "infeksi tanaman → daun layu dari bawah",
@@ -337,29 +532,109 @@
       "larva parasitoid → memakan inang dari dalam",
       "keduanya → menekan populasi hama"
     ],
-    "Bagaimana penyakit busuk daun kentang menyebar?": [
-      "spora P. infestans → terbawa angin dan air",
-      "spora di daun basah → berkecambah dan infeksi",
-      "infeksi daun → spora jatuh ke tanah",
-      "spora di tanah → infeksi umbi kentang"
+    "Bagaimana gejala dan pengendalian penyakit busuk daun kentang yang disebabkan Phytophthora infestans?": [
+      "Phytophthora infestans → bercak basah pada daun",
+      "spora P. infestans → infeksi umbi",
+      "Pseudomonas fluorescens → menghambat P. infestans",
+      "sanitasi → mengurangi sumber infeksi"
     ],
-    "Apa dampak serangan hama Empoasca sp. pada kentang?": [
-      "Empoasca sp. menghisap daun → klorosis",
-      "serangan ringan → klorosis pada tulang daun",
-      "serangan sedang → pinggiran daun mengeriting",
-      "serangan berat → daun kuning dan mati"
+    "Apa saja jenis serangga hama yang menyerang tanaman kentang dan mana yang populasinya tertinggi?": [
+      "Empoasca sp. dominan → populasi tertinggi",
+      "Empoasca sp. → klorosis pada daun",
+      "populasi tinggi → kerusakan tanaman"
     ],
-    "Bagaimana pengendalian hayati penyakit cabai bekerja?": [
-      "Trichoderma spp. → agen antagonis",
+    "Jelaskan penyakit utama pada jagung yang disebabkan oleh jamur dan cara pengendaliannya!": [
+      "Peronosclerospora sp. → bulai jagung",
+      "Helminthosporium sp. → hawar daun",
+      "Puccinia sp. → karat daun",
+      "Ustilago maydis → gosong bengkak",
+      "varietas tahan → menekan infeksi jamur"
+    ],
+    "Apa perbedaan antara hama Spodoptera frugiperda dan Spodoptera litura pada tanaman jagung?": [
+      "S. frugiperda → hama invasif",
+      "S. frugiperda → serangan tongkol dan titik tumbuh",
+      "S. litura → memakan daun hingga tulang daun"
+    ],
+    "Bagaimana strategi pengendalian hama terpadu untuk tanaman cabai?": [
+      "musuh alami → menekan populasi hama",
+      "rotasi tanaman → mengurangi patogen tanah",
+      "mulsa perak → mengurangi vektor virus",
+      "perangkap kuning → menangkap thrips"
+    ],
+    "Apa saja penyakit pada tanaman cabai berdasarkan fase pertumbuhan dan patogen penyebabnya?": [
+      "Colletotrichum spp. → antraknos",
+      "Ralstonia solanacearum → layu bakteri",
+      "Phytophthora capsici → busuk fitoftora",
+      "Xanthomonas → bercak bakteri"
+    ],
+    "Bagaimana cara mengendalikan hama penggerek batang dan penggerek tongkol pada jagung?": [
+      "Ostrinia furnacalis → penggerek batang",
+      "Helicoverpa armigera → penggerek tongkol",
+      "tumpangsari → mengurangi serangan O. furnacalis",
+      "pengelolaan tanah → merusak pupa H. armigera"
+    ],
+    "Bagaimana cara mengendalikan hama thrips pada tanaman cabai?": [
+      "perangkap kuning → menangkap thrips",
+      "mulsa perak → mengurangi populasi thrips",
+      "musuh alami → menekan populasi thrips"
+    ],
+    "Apa penyebab penyakit layu bakteri pada cabai dan bagaimana penanggulangannya?": [
+      "Ralstonia solanacearum → layu bakteri",
+      "R. solanacearum → vaskuler coklat",
+      "Trichoderma → menekan R. solanacearum"
+    ],
+    "Apa gejala dan pengendalian penyakit kudis bakteri pada kentang?": [
+      "Streptomyces scabies → kudis bakteri",
+      "pH rendah → menghambat S. scabies",
+      "rotasi tanaman → mengurangi S. scabies"
+    ],
+    "Bagaimana cara mengendalikan hama lalat buah pada tanaman cabai?": [
+      "metil eugenol → menarik lalat buah",
+      "perangkap atraktan → menangkap lalat buah",
+      "pemusnahan buah → mengurangi sumber infeksi"
+    ],
+    "Apa yang dimaksud dengan hama invasif pada jagung dan berikan contohnya?": [
+      "S. frugiperda masuk 2019 → hama invasif",
+      "S. frugiperda → ancaman ekosistem dan ekonomi"
+    ],
+    "Bagaimana cara mengendalikan penyakit bulai pada jagung secara efektif?": [
+      "Peronosclerospora → bulai jagung",
+      "metalaksil → menghambat Peronosclerospora",
+      "varietas tahan → resistensi bulai",
+      "eradikasi → mengurangi sumber infeksi"
+    ],
+    "Apa gejala dan pengendalian penyakit karat daun pada jagung?": [
+      "Puccinia polysora → karat daun",
+      "kelembaban tinggi → perkembangan cepat",
+      "sanitasi gulma → mengurangi kelembaban mikro",
+      "varietas tahan → resistensi karat"
+    ],
+    "Bagaimana cara mengendalikan hama Empoasca sp. pada tanaman kentang?": [
+      "Empoasca sp. → klorosis daun",
+      "serangan berat → kematian tanaman"
+    ],
+    "Apa perbedaan antara predator dan parasitoid pada ekosistem tanaman cabai?": [
+      "predator → kontak fisik langsung",
+      "parasitoid → telur di dalam inang",
+      "larva parasitoid → memakan inang dari dalam",
+      "keduanya → menekan populasi hama"
+    ],
+    "Bagaimana gejala serangan thrips pada tanaman cabai?": [
+      "thrips menghisap cairan daun → bercak keperakan",
+      "thrips → daun mengeriting dan keriput",
+      "serangan berat → pertumbuhan kerdil",
+      "thrips sebagai vektor → virus mosaik"
+    ],
+    "Apa penyebab penyakit busuk lunak bakteri pada kentang dan bagaimana penanggulangannya?": [
+      "Erwinia carotovora → busuk lunak",
+      "kelembaban tinggi → penyebaran cepat",
       "Bacillus subtilis → antagonis Erwinia",
-      "Pseudomonas fluorescens → agens hayati",
-      "musuh alami → menekan populasi hama"
+      "Pseudomonas fluorescens → antagonis Erwinia"
     ],
-    "Apa penyebab penyakit karat daun pada jagung?": [
-      "Puccinia polysora → urediospora menyebar",
-      "spora di daun → infeksi dan pustule",
-      "pustule → bercak coklat kemerahan",
-      "kelembaban tinggi → perkembangan cepat"
+    "Bagaimana cara mengendalikan hama kutu kebul (Bemisia tabaci) pada tanaman cabai?": [
+      "Menochilus sexmaculatus → memangsa B. tabaci",
+      "Encarcia → parasitoid B. tabaci",
+      "perangkap kuning → menangkap B. tabaci"
     ]
   },
 
@@ -416,7 +691,24 @@
       "rebah kecambah",
       "mosaik cabai",
       "gemini virus",
-      "virus kuning cabai"
+      "virus kuning cabai",
+      "PHT cabai",
+      "mulsa perak",
+      "perangkap kuning",
+      "rotasi tanaman",
+      "sanitasi",
+      "metalaksil",
+      "Bacillus subtilis",
+      "Pseudomonas fluorescens",
+      "Trichoderma",
+      "Menochilus sexmaculatus",
+      "Encarcia",
+      "Biosteres",
+      "Opius",
+      "Bactrocera",
+      "metil eugenol",
+      "varietas tahan",
+      "eradikasi"
     ]
   },
 

@@ -23,10 +23,23 @@ from config import CONFIG, GROQ_ALLOWED_MODELS
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("ragna")
+
+EVAL_DIR = os.path.dirname(os.path.abspath(__file__))  # folder /evaluation
+SAVE_DATA_DIR = os.path.join(EVAL_DIR, "save_data")
+
 
 
 # ── Rate-limit helper ─────────────────────────────────────────────────────────
+class TPDLimitExceeded(Exception):
+    """Rate limit dengan scope harian (tokens per day) — retry dalam
+    hitungan menit tidak akan membantu, kuota baru pulih besok."""
+    pass
+
+
+def _is_tpd_error(error_message: str) -> bool:
+    msg = error_message.lower()
+    return "per day" in msg or "(tpd)" in msg
 
 def _parse_retry_after(error_message: str) -> float:
     import re
@@ -48,12 +61,17 @@ def _call_with_rate_limit_retry(func, *args, max_retries: int = 3, **kwargs):
         try:
             return func(*args, **kwargs)
         except RateLimitError as e:
-            wait_sec = _parse_retry_after(str(e))
-            if attempt < max_retries - 1:
-                logger.warning(
-                    f"Groq rate limit hit (attempt {attempt + 1}/{max_retries}). "
-                    f"Menunggu {wait_sec:.0f}s sebelum retry..."
+            error_str = str(e)
+            if _is_tpd_error(error_str):
+                logger.error(
+                    "Groq TPD (tokens per day) limit tercapai. Tidak retry — "
+                    "kuota baru pulih besok. Progres sudah tersimpan di checkpoint."
                 )
+                raise TPDLimitExceeded(error_str) from e
+
+            wait_sec = _parse_retry_after(error_str)
+            if attempt < max_retries - 1:
+                logger.warning(f"Rate limit (attempt {attempt+1}/{max_retries}). Menunggu {wait_sec:.0f}s...")
                 time.sleep(wait_sec + 5)
             else:
                 logger.error(f"Rate limit masih hit setelah {max_retries} percobaan.")
@@ -110,47 +128,83 @@ class RAGEvaluationPipeline:
         Evaluasi kedua pipeline RAG:
         - Graph RAG (improved dengan Neo4j enrichment)
         - Raw RAG (regular tanpa enrichment)
-        
+
         Returns perbandingan metrics.
         """
         if queries is None:
             queries = self.test_dataset.get("rag_queries", [])
-        
+
         if not queries:
             logger.warning("No RAG test queries found")
             return {}
-        
+
         logger.info(f"Running RAG evaluation on {len(queries)} queries...")
-        
+        question_list = [q["question"] for q in queries if q.get("question")]
+
         # ── Graph RAG (improved) ──────────────────────────────────────────────
         logger.info("  Evaluating GRAPH RAG pipeline...")
         graph_responses = self._evaluate_pipeline_responses(
             queries, use_raw=False
         )
-        
+
+        # Retrieval/enrichment/rerank: murah (tanpa Groq), aman diukur ulang
+        # terpisah tanpa menambah token generation. Diukur SELAGI rag_mode
+        # masih "improved" (default), sebelum di-switch ke "regular" di bawah.
+        speed_sample_size = min(10, len(question_list))
+        graph_speed_sample = question_list[:speed_sample_size]
+        graph_component_speed = self.rag_eval.evaluate_speed(graph_speed_sample, num_runs=2, use_raw=False)
+
         # ── Raw RAG (regular) ────────────────────────────────────────────────
         logger.info("  Evaluating RAW RAG pipeline...")
-        # Temporarily switch rag_mode to 'regular'
         original_mode = CONFIG.get("rag_mode", "improved")
         CONFIG["rag_mode"] = "regular"
-        
+
         raw_responses = self._evaluate_pipeline_responses(
             queries, use_raw=True
         )
-        
+
+        # PENTING: component_speed untuk raw diukur SEBELUM rag_mode
+        # dikembalikan ke original_mode, supaya retrieval/rerank yang diukur
+        # benar-benar mencerminkan mode "regular", bukan "improved".
+        raw_speed_sample = question_list[:speed_sample_size]  # sample sama, biar adil dibandingkan
+        raw_component_speed = self.rag_eval.evaluate_speed(raw_speed_sample, num_runs=2, use_raw=True)
+
         # Restore original mode
         CONFIG["rag_mode"] = original_mode
-        
+
         if not graph_responses and not raw_responses:
             logger.error("Both pipelines failed.")
             return {}
-        
+
         # Calculate metrics for both
         results = {
             "graph_rag": {},
             "raw_rag": {}
         }
-        
+
+        def _build_speed_dict(responses: List[Dict], component_speed: Dict) -> Dict:
+            """
+            Gabungkan retrieval/enrichment/rerank (diukur ulang, murah) dengan
+            total waktu nyata (sudah terekam gratis di 'processing_time' saat
+            response digenerate). Generation Latency diturunkan lewat
+            pengurangan, tanpa perlu memanggil Groq API sekali lagi.
+            """
+            total_times = [r["processing_time"] for r in responses if r.get("processing_time")]
+            avg_total = float(np.mean(total_times)) if total_times else 0.0
+            avg_retrieval  = component_speed.get("retrieval", {}).get("mean", 0)
+            avg_enrichment = component_speed.get("enrichment", {}).get("mean", 0)
+            avg_rerank     = component_speed.get("rerank", {}).get("mean", 0)
+            est_generation = max(avg_total - avg_retrieval - avg_enrichment - avg_rerank, 0)
+
+            return {
+                **component_speed,
+                "generation": {"mean": est_generation, "std": 0.0},
+                "total": {
+                    "mean": avg_total,
+                    "std": float(np.std(total_times)) if total_times else 0.0,
+                },
+            }
+
         if graph_responses:
             faithfulness = self.rag_eval.evaluate_faithfulness_batch(graph_responses)
             completeness = self.rag_eval.evaluate_completeness_batch(
@@ -158,8 +212,8 @@ class RAGEvaluationPipeline:
                 self.test_dataset.get("causal_ground_truth", {})
             )
             relevance = self.rag_eval.evaluate_answer_relevance_batch(graph_responses)
-            speed = self.rag_eval.evaluate_speed([q["question"] for q in queries if q.get("question")])
-            
+            speed = _build_speed_dict(graph_responses, graph_component_speed)
+
             results["graph_rag"] = {
                 "faithfulness": faithfulness,
                 "completeness": completeness,
@@ -167,7 +221,7 @@ class RAGEvaluationPipeline:
                 "speed": speed,
                 "responses": graph_responses
             }
-        
+
         if raw_responses:
             faithfulness = self.rag_eval.evaluate_faithfulness_batch(raw_responses)
             completeness = self.rag_eval.evaluate_completeness_batch(
@@ -175,8 +229,8 @@ class RAGEvaluationPipeline:
                 self.test_dataset.get("causal_ground_truth", {})
             )
             relevance = self.rag_eval.evaluate_answer_relevance_batch(raw_responses)
-            speed = self.rag_eval.evaluate_speed([q["question"] for q in queries if q.get("question")])
-            
+            speed = _build_speed_dict(raw_responses, raw_component_speed)
+
             results["raw_rag"] = {
                 "faithfulness": faithfulness,
                 "completeness": completeness,
@@ -184,7 +238,7 @@ class RAGEvaluationPipeline:
                 "speed": speed,
                 "responses": raw_responses
             }
-        
+
         return results
     
     def _evaluate_pipeline_responses(
@@ -192,46 +246,91 @@ class RAGEvaluationPipeline:
         queries: List[Dict], 
         use_raw: bool = False
     ) -> List[Dict]:
-        """
-        Eksekusi pipeline untuk list queries.
-        """
-        responses = []
+        pipeline_label = "RAW" if use_raw else "GRAPH"
+        checkpoint_dir = os.path.join(SAVE_DATA_DIR, "rag")
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        checkpoint_path = os.path.join(
+            checkpoint_dir, f"_checkpoint_{'raw' if use_raw else 'graph'}_responses.json"
+        )
+
+        if os.path.exists(checkpoint_path):
+            with open(checkpoint_path, 'r', encoding='utf-8') as f:
+                loaded = json.load(f)
+
+            query_by_question = {q.get("question", ""): q for q in queries}
+            responses = []
+            for r in loaded:
+                q_text = r["question"]
+                if q_text in query_by_question:
+                    current_q = query_by_question[q_text]
+                    r["gold_answer"] = current_q.get("gold_answer")
+                    r["expected_causal"] = current_q.get("expected_causal_relations", [])
+                    responses.append(r)
+
+            if len(responses) != len(loaded):
+                logger.warning(
+                    f"  {len(loaded) - len(responses)} entri checkpoint dibuang "
+                    f"(pertanyaan tidak lagi ada di test_dataset.json saat ini)."
+                )
+            logger.info(f"  Resuming: {len(responses)} response valid dari checkpoint.")
+        else:
+            responses = []
+
+        done_questions = {r["question"] for r in responses}
         skipped = 0
-        
+
         for idx, q in enumerate(queries):
             question = q.get("question", "")
-            if not question:
+            if not question or question in done_questions:
                 continue
-            
-            logger.info(f"  Query {idx + 1}/{len(queries)}: {question[:60]}...")
-            
+
+            # ── PENANDA MULAI QUERY ─────────────────────────────────────
+            logger.info(
+                f"=== [{pipeline_label}] Query {idx + 1}/{len(queries)} START: "
+                f"{question[:60]}..."
+            )
+            q_start = time.perf_counter()
+
             def _run_query():
                 if use_raw:
-                    # Raw RAG: set rag_mode ke 'regular'
                     original = CONFIG.get("rag_mode", "improved")
                     CONFIG["rag_mode"] = "regular"
                     try:
                         return self.pipeline.process_query(
-                            question,
-                            chat_id=q.get("chat_id"),
-                            user_id=q.get("user_id")
+                            question, chat_id=q.get("chat_id"), user_id=q.get("user_id")
                         )
                     finally:
                         CONFIG["rag_mode"] = original
                 else:
                     return self.pipeline.process_query(
-                        question,
-                        chat_id=q.get("chat_id"),
-                        user_id=q.get("user_id")
+                        question, chat_id=q.get("chat_id"), user_id=q.get("user_id")
                     )
-            
+
             try:
                 response = _call_with_rate_limit_retry(_run_query, max_retries=3)
+            except TPDLimitExceeded:
+                logger.error(
+                    f"=== [{pipeline_label}] STOP: TPD limit tercapai di Query {idx + 1}/{len(queries)}. "
+                    f"{len(responses)} response sudah aman di checkpoint. "
+                    f"Jalankan ulang script besok untuk melanjutkan otomatis."
+                )
+                return responses   # <- keluar total dari fungsi, bukan lanjut loop
             except Exception as e:
-                logger.error(f"  Query dilewati karena error: {e}")
+                logger.error(f"=== [{pipeline_label}] Query {idx + 1}/{len(queries)} FAILED: {e}")
                 skipped += 1
                 continue
-            
+            except Exception as e:
+                logger.error(f"=== [{pipeline_label}] Query {idx + 1}/{len(queries)} FAILED: {e}")
+                skipped += 1
+                continue
+                
+            # ── PENANDA: mulai membaca stream generation ────────────────
+            logger.info(
+                f"    [{pipeline_label}] Query {idx + 1}: retrieval+enrich+rerank "
+                f"selesai, mulai membaca generation stream..."
+            )
+            gen_start = time.perf_counter()
+
             answer_text = ""
             try:
                 if hasattr(response.answer, '__iter__') and not isinstance(response.answer, str):
@@ -241,9 +340,15 @@ class RAGEvaluationPipeline:
                     answer_text = str(response.answer)
             except Exception as e:
                 from groq import RateLimitError
-                if isinstance(e, RateLimitError):
+                if isinstance(e, RateLimitError) and _is_tpd_error(str(e)):
+                    logger.error(
+                        f"=== [{pipeline_label}] TPD limit tercapai di Query {idx + 1}/{len(queries)}. "
+                        f"Menghentikan evaluasi sekarang."
+                    )
+                    raise TPDLimitExceeded(str(e)) from e
+                elif isinstance(e, RateLimitError):
                     wait_sec = _parse_retry_after(str(e))
-                    logger.warning(f"  Rate limit saat streaming. Menunggu {wait_sec:.0f}s...")
+                    logger.warning(f"    [{pipeline_label}] Query {idx+1}: rate limit. Menunggu {wait_sec:.0f}s...")
                     time.sleep(wait_sec + 5)
                     try:
                         response = _run_query()
@@ -253,14 +358,25 @@ class RAGEvaluationPipeline:
                         else:
                             answer_text = str(response.answer)
                     except Exception as e2:
-                        logger.error(f"  Retry stream gagal: {e2}")
+                        logger.error(f"=== [{pipeline_label}] Query {idx + 1} retry stream gagal: {e2}")
                         skipped += 1
                         continue
                 else:
-                    logger.error(f"  Error membaca stream: {e}")
+                    logger.error(f"=== [{pipeline_label}] Query {idx+1} error: {e}")
                     skipped += 1
                     continue
-            
+
+            gen_elapsed = time.perf_counter() - gen_start
+            total_elapsed = time.perf_counter() - q_start
+
+            # ── PENANDA SELESAI QUERY, dengan breakdown waktu ───────────
+            logger.info(
+                f"=== [{pipeline_label}] Query {idx + 1}/{len(queries)} DONE | "
+                f"generation_stream={gen_elapsed:.1f}s | "
+                f"total_cycle={total_elapsed:.1f}s | "
+                f"pipeline.processing_time={response.processing_time:.1f}s"
+            )
+
             responses.append({
                 "question": question,
                 "answer": answer_text,
@@ -269,66 +385,62 @@ class RAGEvaluationPipeline:
                 "gold_answer": q.get("gold_answer"),
                 "expected_causal": q.get("expected_causal_relations", [])
             })
-        
+
+            with open(checkpoint_path, 'w', encoding='utf-8') as f:
+                json.dump(responses, f, indent=2, ensure_ascii=False, default=str)
+
         if skipped > 0:
-            logger.warning(f"{skipped} query dilewati karena rate limit atau error.")
-        
+            logger.warning(f"[{pipeline_label}] {skipped} query dilewati karena rate limit atau error.")
+
         return responses
     
     def evaluate_llm_all_models(self) -> Dict:
-        """
-        Evaluasi semua model Groq yang tersedia.
-        
-        Returns:
-            Dict dengan hasil evaluasi per model
-        """
         logger.info("=" * 60)
         logger.info("Evaluating ALL Groq models...")
-        
+
         compliance_tests = self.test_dataset.get("compliance_tests", [])
-        
         if not compliance_tests:
             logger.warning("No compliance tests found")
             return {}
-        
+
+        checkpoint_dir = os.path.join(SAVE_DATA_DIR, "llm")
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        checkpoint_path = os.path.join(checkpoint_dir, "_checkpoint_llm_results.json")
+
         results = {}
-        
-        # Get list of models from config
+        if os.path.exists(checkpoint_path):
+            with open(checkpoint_path, 'r', encoding='utf-8') as f:
+                results = json.load(f)
+            logger.info(f"  Resuming: {len(results)} model sudah selesai dari checkpoint.")
+
         models_to_eval = list(GROQ_ALLOWED_MODELS)
         logger.info(f"Models to evaluate: {len(models_to_eval)}")
-        
-        # Store original model
+
         original_model = CONFIG.get("groq_model", "llama-3.3-70b-versatile")
-        
+
         for model_id in models_to_eval:
+            if model_id in results and "error" not in results[model_id]:
+                logger.info(f"  Skip {model_id} (sudah ada di checkpoint)")
+                continue
+
             logger.info(f"\n--- Evaluating model: {model_id} ---")
-            
             try:
-                # Switch model
                 from config import set_groq_model
                 set_groq_model(model_id)
-                
-                # Update pipeline's groq client? Pipeline uses config directly
-                # The pipeline's models.groq_client is already instantiated with original API key
-                # We need to recreate the groq_client with new model? No, just config change works.
-                
-                # Evaluate throughput (using official data)
+
                 throughput = self.llm_eval.evaluate_throughput()
-                
-                # Evaluate compliance
+
                 compliance = None
                 if compliance_tests:
                     try:
                         compliance = _call_with_rate_limit_retry(
-                            self.llm_eval.evaluate_instruction_compliance, 
-                            compliance_tests, 
-                            max_retries=2
+                            self.llm_eval.evaluate_instruction_compliance,
+                            compliance_tests, max_retries=2
                         )
                     except Exception as e:
                         logger.error(f"Compliance evaluation for {model_id} failed: {e}")
                         compliance = None
-                
-                # Evaluate conciseness (using gold answers)
+
                 conciseness = []
                 if self.test_dataset and self.test_dataset.get("rag_queries"):
                     test_responses = [
@@ -338,28 +450,31 @@ class RAGEvaluationPipeline:
                     ]
                     if test_responses:
                         conciseness = self.llm_eval.evaluate_conciseness(test_responses)
-                
+
                 results[model_id] = {
                     "throughput": throughput,
                     "compliance": compliance,
                     "conciseness": conciseness
                 }
-                
                 logger.info(f"✓ {model_id} evaluation complete")
-                
-                # Wait a bit between models to avoid rate limits
+
+                # Simpan checkpoint tiap model selesai
+                with open(checkpoint_path, 'w', encoding='utf-8') as f:
+                    json.dump(results, f, indent=2, ensure_ascii=False, default=str)
+
                 time.sleep(10)
-                
+
             except Exception as e:
                 logger.error(f"Failed to evaluate {model_id}: {e}")
                 results[model_id] = {"error": str(e)}
-        
-        # Restore original model
+                with open(checkpoint_path, 'w', encoding='utf-8') as f:
+                    json.dump(results, f, indent=2, ensure_ascii=False, default=str)
+
         try:
             set_groq_model(original_model)
         except Exception:
             pass
-        
+
         return results
     
     def run_full_evaluation(
