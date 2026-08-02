@@ -127,6 +127,9 @@ class RAGResponse:
     sources:         List[Dict]      # referensi untuk ditampilkan di UI
     final_chunks:    List[EnrichedChunk]
     processing_time: float
+    retrieval_time: float = 0.0      # <- baru
+    enrichment_time: float = 0.0     # <- baru
+    rerank_time: float = 0.0         # <- baru
     intent:          str = "knowledge"  # 'knowledge' | 'social'
 
 
@@ -1185,12 +1188,12 @@ class RAGPipeline:
     ) -> RAGResponse:
         """
         Pipeline knowledge — WITH retrieval (6 tahap).
-          Tahap 1 → ChromaDB wide retrieval
-          Tahap 2 → Neo4j context enrichment
-          Tahap 3 → BGE reranking (GPU)
-          Tahap 4 → Filtering & diversifikasi sumber
-          Tahap 5 → Memory inject (identity + chat_memory dari ChromaDB)
-          Tahap 6 → LLM streaming generation (Groq API, temp=0.2)
+        Tahap 1 → ChromaDB wide retrieval
+        Tahap 2 → Neo4j context enrichment
+        Tahap 3 → BGE reranking (GPU)
+        Tahap 4 → Filtering & diversifikasi sumber
+        Tahap 5 → Memory inject (identity + chat_memory dari ChromaDB)
+        Tahap 6 → LLM streaming generation (Groq API, temp=0.2)
 
         chat_id digunakan di Tahap 5 untuk mengambil memory summary.
         Jika None (misal dari simple_retrieval), memory dilewati.
@@ -1208,7 +1211,6 @@ class RAGPipeline:
         log.info("[Knowledge] Bahasa terdeteksi: %s", lang)
 
         nlp_keywords = self.models.extract_keywords_nlp(query, lang)
-        # Query diperkaya: teks asli + keyword NLP → vektor embedding lebih akurat
         enriched_query = f"{query} {nlp_keywords}".strip() if nlp_keywords else query
         log.debug("[Knowledge] Query diperkaya: %r", enriched_query[:200])
 
@@ -1217,15 +1219,13 @@ class RAGPipeline:
         # ══════════════════════════════════════════════════════════════════════
         k = CONFIG["chroma_retrieval_k"]
         log.info("[Tahap 1] ChromaDB retrieval (k=%d)...", k)
-        t1 = time.perf_counter()
+        t1_start = time.perf_counter()
 
-        query_emb  = self.models.get_embedding(enriched_query)  # pakai query diperkaya
+        query_emb  = self.models.get_embedding(enriched_query)
         candidates = self.chroma.retrieve(query_emb, k=k)
 
-        log.info(
-            "[Tahap 1] %d kandidat ditemukan  (%.3fs)",
-            len(candidates), time.perf_counter() - t1,
-        )
+        retrieval_elapsed = time.perf_counter() - t1_start
+        log.info("[Tahap 1] %d kandidat ditemukan  (%.3fs)", len(candidates), retrieval_elapsed)  # <-- FIX #1
 
         if not candidates:
             log.warning("[Tahap 1] Tidak ada kandidat — pipeline berhenti.")
@@ -1234,6 +1234,7 @@ class RAGPipeline:
                 sources=[],
                 final_chunks=[],
                 processing_time=time.perf_counter() - t_start,
+                retrieval_time=retrieval_elapsed,           # <-- FIX (tambahan, early exit)
                 intent="knowledge",
             )
 
@@ -1244,14 +1245,12 @@ class RAGPipeline:
             "[Tahap 2] Neo4j enrichment (%d kandidat, window=±%d)...",
             len(candidates), CONFIG["context_window"],
         )
-        t2 = time.perf_counter()
+        t2_start = time.perf_counter()
 
         enriched = self.neo4j.enrich(candidates, CONFIG["context_window"])
 
-        log.info(
-            "[Tahap 2] %d chunk diperkaya  (%.3fs)",
-            len(enriched), time.perf_counter() - t2,
-        )
+        enrichment_elapsed = time.perf_counter() - t2_start
+        log.info("[Tahap 2] %d chunk diperkaya  (%.3fs)", len(enriched), enrichment_elapsed)  # <-- FIX #2
 
         if not enriched:
             log.warning("[Tahap 2] Enrichment kosong — pipeline berhenti.")
@@ -1260,22 +1259,23 @@ class RAGPipeline:
                 sources=[],
                 final_chunks=[],
                 processing_time=time.perf_counter() - t_start,
+                retrieval_time=retrieval_elapsed,           # <-- FIX (tambahan, early exit)
+                enrichment_time=enrichment_elapsed,          # <-- FIX (tambahan, early exit)
                 intent="knowledge",
             )
 
         # ══════════════════════════════════════════════════════════════════════
-        # TAHAP 3 — Reranking (BGE Cross-Encoder di GPU)
-        # Input: context_text = prev + target + next
-        # Tujuan: nilai kecocokan teks sekitar chunk vs query
+        # TAHAP 3 — BGE Reranking
         # ══════════════════════════════════════════════════════════════════════
         reranked_k = CONFIG["reranked_k"]
         log.info(
             "[Tahap 3] BGE reranking (%d → top %d) @ GPU...",
             len(enriched), reranked_k,
         )
-        t3 = time.perf_counter()
 
-        scores = self.models.rerank(query, [c.context_text for c in enriched])  # query asli untuk reranking
+        t3_start = time.perf_counter()
+
+        scores = self.models.rerank(query, [c.context_text for c in enriched])
 
         for i, score in enumerate(scores):
             if i < len(enriched):
@@ -1284,12 +1284,14 @@ class RAGPipeline:
         enriched.sort(key=lambda x: x.rerank_score, reverse=True)
         top_chunks = enriched[:reranked_k]
 
-        log.info(
+        rerank_elapsed = time.perf_counter() - t3_start
+        log.info(                                                                            # <-- FIX #3
             "[Tahap 3] Top %d dipilih  (%.3fs)  skor: min=%.4f  max=%.4f",
-            len(top_chunks), time.perf_counter() - t3,
+            len(top_chunks), rerank_elapsed,
             min(c.rerank_score for c in top_chunks),
             max(c.rerank_score for c in top_chunks),
         )
+
 
         # ══════════════════════════════════════════════════════════════════════
         # TAHAP 4 — Filtering & Diversifikasi Sumber
@@ -1382,8 +1384,11 @@ class RAGPipeline:
         return RAGResponse(
             answer=answer_gen,
             sources=sources,
-            final_chunks=final_chunks,
+            final_chunks=top_chunks,
             processing_time=elapsed,
+            retrieval_time=retrieval_elapsed,
+            enrichment_time=enrichment_elapsed,
+            rerank_time=rerank_elapsed,
             intent="knowledge",
         )
     
@@ -1477,8 +1482,7 @@ class RAGPipeline:
         t1 = time.perf_counter()
 
         query_emb = self.models.get_embedding(enriched_query)
-        
-        # Gunakan raw collection, bukan konten_isi
+
         raw_collection = self.chroma.client.get_collection(CONFIG["raw_collection"])
         results = raw_collection.query(
             query_embeddings=[query_emb],
@@ -1498,12 +1502,15 @@ class RAGPipeline:
                     "vector_score": dist,
                 })
 
-        log.info("[RegularRAG Tahap 1] %d chunk ditemukan (%.3fs)", len(raw_chunks), time.perf_counter() - t1)
+        raw_retrieval_elapsed = time.perf_counter() - t1                                       # <-- FIX #4a
+        log.info("[RegularRAG Tahap 1] %d chunk ditemukan (%.3fs)", len(raw_chunks), raw_retrieval_elapsed)
 
         if not raw_chunks:
             return RAGResponse(
                 answer="Maaf, tidak menemukan informasi relevan di database.",
-                sources=[], final_chunks=[], processing_time=time.perf_counter() - t_start, intent="knowledge",
+                sources=[], final_chunks=[], processing_time=time.perf_counter() - t_start,
+                retrieval_time=raw_retrieval_elapsed,                                           # <-- FIX #4b
+                intent="knowledge",
             )
 
         # ══════════════════════════════════════════════════════════════════════
@@ -1522,7 +1529,8 @@ class RAGPipeline:
         raw_chunks.sort(key=lambda x: x["rerank_score"], reverse=True)
         top_chunks = raw_chunks[:reranked_k]
 
-        log.info("[RegularRAG Tahap 2] Top %d dipilih (%.3fs)", len(top_chunks), time.perf_counter() - t2)
+        raw_rerank_elapsed = time.perf_counter() - t2                                           # <-- FIX #4c
+        log.info("[RegularRAG Tahap 2] Top %d dipilih (%.3fs)", len(top_chunks), raw_rerank_elapsed)
 
         # ══════════════════════════════════════════════════════════════════════
         # TAHAP 3 — Memory Inject
@@ -1543,7 +1551,6 @@ class RAGPipeline:
             max_new_tokens=CONFIG["max_new_tokens"],
         )
 
-        # ── Sumber referensi untuk UI ─────────────────────────────────────────
         sources = [
             {
                 "chunk_text": c["text"][:300] + ("…" if len(c["text"]) > 300 else ""),
@@ -1563,6 +1570,9 @@ class RAGPipeline:
             sources=sources,
             final_chunks=top_chunks,
             processing_time=elapsed,
+            retrieval_time=raw_retrieval_elapsed,        # <-- FIX #4d
+            enrichment_time=0.0,                          # <-- FIX #4e (Raw memang tidak enrich)
+            rerank_time=raw_rerank_elapsed,               # <-- FIX #4f
             intent="knowledge",
         )
     

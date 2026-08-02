@@ -147,13 +147,6 @@ class RAGEvaluationPipeline:
             queries, use_raw=False
         )
 
-        # Retrieval/enrichment/rerank: murah (tanpa Groq), aman diukur ulang
-        # terpisah tanpa menambah token generation. Diukur SELAGI rag_mode
-        # masih "improved" (default), sebelum di-switch ke "regular" di bawah.
-        speed_sample_size = min(10, len(question_list))
-        graph_speed_sample = question_list[:speed_sample_size]
-        graph_component_speed = self.rag_eval.evaluate_speed(graph_speed_sample, num_runs=2, use_raw=False)
-
         # ── Raw RAG (regular) ────────────────────────────────────────────────
         logger.info("  Evaluating RAW RAG pipeline...")
         original_mode = CONFIG.get("rag_mode", "improved")
@@ -163,80 +156,59 @@ class RAGEvaluationPipeline:
             queries, use_raw=True
         )
 
-        # PENTING: component_speed untuk raw diukur SEBELUM rag_mode
-        # dikembalikan ke original_mode, supaya retrieval/rerank yang diukur
-        # benar-benar mencerminkan mode "regular", bukan "improved".
-        raw_speed_sample = question_list[:speed_sample_size]  # sample sama, biar adil dibandingkan
-        raw_component_speed = self.rag_eval.evaluate_speed(raw_speed_sample, num_runs=2, use_raw=True)
-
-        # Restore original mode
         CONFIG["rag_mode"] = original_mode
 
         if not graph_responses and not raw_responses:
             logger.error("Both pipelines failed.")
             return {}
 
-        # Calculate metrics for both
-        results = {
-            "graph_rag": {},
-            "raw_rag": {}
-        }
+        results = {"graph_rag": {}, "raw_rag": {}}
 
-        def _build_speed_dict(responses: List[Dict], component_speed: Dict) -> Dict:
-            """
-            Gabungkan retrieval/enrichment/rerank (diukur ulang, murah) dengan
-            total waktu nyata (sudah terekam gratis di 'processing_time' saat
-            response digenerate). Generation Latency diturunkan lewat
-            pengurangan, tanpa perlu memanggil Groq API sekali lagi.
-            """
-            total_times = [r["processing_time"] for r in responses if r.get("processing_time")]
-            avg_total = float(np.mean(total_times)) if total_times else 0.0
-            avg_retrieval  = component_speed.get("retrieval", {}).get("mean", 0)
-            avg_enrichment = component_speed.get("enrichment", {}).get("mean", 0)
-            avg_rerank     = component_speed.get("rerank", {}).get("mean", 0)
-            est_generation = max(avg_total - avg_retrieval - avg_enrichment - avg_rerank, 0)
+        def _build_speed_dict(responses: List[Dict]) -> Dict:
+            total_times      = [r["processing_time"] for r in responses if r.get("processing_time")]
+            gen_times        = [r["generation_time"] for r in responses if r.get("generation_time")]
+            retrieval_times  = [
+                r.get("retrieval_time", 0.0) + r.get("enrichment_time", 0.0)
+                for r in responses
+            ]
+            rerank_times     = [r.get("rerank_time", 0.0) for r in responses]
+
+            def _safe_stat(values):
+                if not values:
+                    return {"mean": 0.0, "std": 0.0}
+                return {"mean": float(np.mean(values)), "std": float(np.std(values))}
 
             return {
-                **component_speed,
-                "generation": {"mean": est_generation, "std": 0.0},
-                "total": {
-                    "mean": avg_total,
-                    "std": float(np.std(total_times)) if total_times else 0.0,
-                },
+                "retrieval": _safe_stat(retrieval_times),
+                "rerank": _safe_stat(rerank_times),
+                "generation": _safe_stat(gen_times),
+                "total": _safe_stat(total_times),
             }
 
         if graph_responses:
             faithfulness = self.rag_eval.evaluate_faithfulness_batch(graph_responses)
             completeness = self.rag_eval.evaluate_completeness_batch(
-                graph_responses, 
-                self.test_dataset.get("causal_ground_truth", {})
+                graph_responses, self.test_dataset.get("causal_ground_truth", {})
             )
             relevance = self.rag_eval.evaluate_answer_relevance_batch(graph_responses)
-            speed = _build_speed_dict(graph_responses, graph_component_speed)
+            speed = _build_speed_dict(graph_responses)   # <-- FIX: 1 argumen saja
 
             results["graph_rag"] = {
-                "faithfulness": faithfulness,
-                "completeness": completeness,
-                "relevance": relevance,
-                "speed": speed,
-                "responses": graph_responses
+                "faithfulness": faithfulness, "completeness": completeness,
+                "relevance": relevance, "speed": speed, "responses": graph_responses
             }
 
         if raw_responses:
             faithfulness = self.rag_eval.evaluate_faithfulness_batch(raw_responses)
             completeness = self.rag_eval.evaluate_completeness_batch(
-                raw_responses, 
-                self.test_dataset.get("causal_ground_truth", {})
+                raw_responses, self.test_dataset.get("causal_ground_truth", {})
             )
             relevance = self.rag_eval.evaluate_answer_relevance_batch(raw_responses)
-            speed = _build_speed_dict(raw_responses, raw_component_speed)
+            speed = _build_speed_dict(raw_responses)     # <-- FIX: 1 argumen saja
 
             results["raw_rag"] = {
-                "faithfulness": faithfulness,
-                "completeness": completeness,
-                "relevance": relevance,
-                "speed": speed,
-                "responses": raw_responses
+                "faithfulness": faithfulness, "completeness": completeness,
+                "relevance": relevance, "speed": speed, "responses": raw_responses
             }
 
         return results
@@ -382,6 +354,10 @@ class RAGEvaluationPipeline:
                 "answer": answer_text,
                 "chunks": response.final_chunks,
                 "processing_time": response.processing_time,
+                "generation_time": gen_elapsed,
+                "retrieval_time": response.retrieval_time,      # <-- TAMBAHKAN
+                "enrichment_time": response.enrichment_time,     # <-- TAMBAHKAN
+                "rerank_time": response.rerank_time,             # <-- TAMBAHKAN
                 "gold_answer": q.get("gold_answer"),
                 "expected_causal": q.get("expected_causal_relations", [])
             })

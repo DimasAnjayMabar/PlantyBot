@@ -8,6 +8,7 @@ import json
 import os
 import re
 import sys
+from venv import logger
 from matplotlib import gridspec
 import numpy as np
 from typing import List, Dict, Optional, Tuple, Any
@@ -246,71 +247,6 @@ class RAGEvaluator:
             ))
         
         return results
-    
-    def evaluate_speed(self, test_queries: List[str], num_runs: int = 1, use_raw: bool = False) -> Dict:
-        timing_stats = {"total_times": [], "retrieval_times": [], "enrichment_times": [],
-                        "rerank_times": [], "generation_times": [], "memory_times": []}
-
-        for query in test_queries:
-            for _ in range(num_runs):
-                t_start = time.perf_counter()
-
-                if use_raw:
-                    # Jalur RAW asli: raw_collection, TANPA neo4j enrich
-                    t1 = time.perf_counter()
-                    query_emb = self.models.get_embedding(query)
-                    raw_collection = self.pipeline.chroma.client.get_collection(CONFIG["raw_collection"])
-                    raw_results = raw_collection.query(query_embeddings=[query_emb], n_results=12,
-                                                        include=["documents"])
-                    timing_stats["retrieval_times"].append(time.perf_counter() - t1)
-                    timing_stats["enrichment_times"].append(0.0)  # Raw tidak enrich
-
-                    t3 = time.perf_counter()
-                    texts = raw_results["documents"][0]
-                    scores = self.models.rerank(query, texts)
-                    timing_stats["rerank_times"].append(time.perf_counter() - t3)
-                else:
-                    # Jalur GRAPH asli: chroma.retrieve() + neo4j.enrich()
-                    t1 = time.perf_counter()
-                    query_emb = self.models.get_embedding(query)
-                    candidates = self.pipeline.chroma.retrieve(query_emb, k=12)
-                    timing_stats["retrieval_times"].append(time.perf_counter() - t1)
-
-                    t2 = time.perf_counter()
-                    enriched = self.pipeline.neo4j.enrich(candidates, context_window=1)
-                    timing_stats["enrichment_times"].append(time.perf_counter() - t2)
-
-                    t3 = time.perf_counter()
-                    scores = self.models.rerank(query, [c.context_text for c in enriched])
-                    timing_stats["rerank_times"].append(time.perf_counter() - t3)
-
-                timing_stats["total_times"].append(time.perf_counter() - t_start)
-        
-        return {
-            "total": {
-                "mean": np.mean(timing_stats["total_times"]),
-                "std": np.std(timing_stats["total_times"]),
-                "p95": np.percentile(timing_stats["total_times"], 95),
-                "p99": np.percentile(timing_stats["total_times"], 99)
-            },
-            "retrieval": {
-                "mean": np.mean(timing_stats["retrieval_times"]),
-                "std": np.std(timing_stats["retrieval_times"])
-            },
-            "enrichment": {
-                "mean": np.mean(timing_stats["enrichment_times"]) if timing_stats["enrichment_times"] else 0.0,
-                "std": np.std(timing_stats["enrichment_times"]) if timing_stats["enrichment_times"] else 0.0
-            },
-            "rerank": {
-                "mean": np.mean(timing_stats["rerank_times"]),
-                "std": np.std(timing_stats["rerank_times"])
-            },
-            "generation": {
-                "mean": np.mean(timing_stats["generation_times"]),
-                "std": np.std(timing_stats["generation_times"])
-            },
-            "total_queries": len(test_queries) * num_runs
-        }
     
     def _extract_claims(self, text: str) -> List[str]:
         """Ekstraksi klaim faktual dari teks jawaban."""
