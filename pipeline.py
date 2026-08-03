@@ -510,13 +510,7 @@ class ChromaRetriever:
 
 class Neo4jEnricher:
     """
-    Context enrichment dari Neo4j per kandidat chunk.
-
-    Per isi_id:
-      - Ambil Node Isi  → sub_judul, halaman, konten_chunk
-      - Ambil Node Jurnal via (Jurnal)-[:HAS_SECTION]->(Isi)
-      - Ambil prev/next chunks via (Isi)-[:NEXT]->(Isi)
-        sejauh context_window langkah
+    ... (docstring tidak berubah)
     """
 
     def __init__(
@@ -524,13 +518,34 @@ class Neo4jEnricher:
         uri:      str = CONFIG["neo4j_uri"],
         user:     str = CONFIG["neo4j_user"],
         password: str = CONFIG["neo4j_password"],
+        max_wait_seconds: int = 300,   # nunggu maksimal 5 menit sebelum menyerah
+        retry_interval: int = 5,        # cek ulang tiap 5 detik
     ):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
-        log.info("Neo4j: %s", uri)
+
+        waited = 0
+        while True:
+            try:
+                self.driver.verify_connectivity()
+                log.info("Neo4j: %s (terhubung)", uri)
+                break
+            except Exception as e:
+                if waited == 0:
+                    print(f"\n⚠️  Neo4j belum aktif di {uri}")
+                    print(f"   Silakan nyalakan Neo4j server sekarang.")
+                print(f"   Menunggu koneksi Neo4j... ({waited}s / {max_wait_seconds}s)", end="\r")
+
+                if waited >= max_wait_seconds:
+                    raise ConnectionError(
+                        f"Neo4j tidak dapat dihubungi setelah {max_wait_seconds}s di {uri}. "
+                        f"Pastikan server aktif lalu jalankan ulang."
+                    ) from e
+
+                time.sleep(retry_interval)
+                waited += retry_interval
 
     def close(self):
         self.driver.close()
-
     def enrich(
         self,
         candidates: List[CandidateChunk],
