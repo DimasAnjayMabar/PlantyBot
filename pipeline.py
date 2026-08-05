@@ -531,9 +531,9 @@ class Neo4jEnricher:
                 break
             except Exception as e:
                 if waited == 0:
-                    print(f"\n⚠️  Neo4j belum aktif di {uri}")
-                    print(f"   Silakan nyalakan Neo4j server sekarang.")
-                print(f"   Menunggu koneksi Neo4j... ({waited}s / {max_wait_seconds}s)", end="\r")
+                    print(f"\n⚠️  Neo4j is not activated {uri}")
+                    print(f"   Please activate it now")
+                print(f"   Waiting for Neo4j connection... ({waited}s / {max_wait_seconds}s)", end="\r")
 
                 if waited >= max_wait_seconds:
                     raise ConnectionError(
