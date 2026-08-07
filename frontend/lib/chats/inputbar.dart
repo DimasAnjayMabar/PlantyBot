@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:frontend/chats/service_chats.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:frontend/services/token_storage.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:image_picker/image_picker.dart';
 
@@ -35,6 +36,7 @@ class InputBar extends StatefulWidget {
     required this.onGetModels,
     required this.onSetRagMode,
     required this.onGetRagMode,
+    required this.onGetActiveModel,  // <-- TAMBAHKAN (required)
     this.pendingDetailId,
     this.onStop,
   });
@@ -51,6 +53,7 @@ class InputBar extends StatefulWidget {
   final Future<List<Map<String, dynamic>>> Function() onGetModels;
   final Future<bool> Function(String mode) onSetRagMode;
   final Future<String> Function() onGetRagMode;
+  final Future<String?> Function() onGetActiveModel;  // <-- TAMBAHKAN
   final int? pendingDetailId;
   final VoidCallback? onStop;
 
@@ -64,7 +67,7 @@ class _InputBarState extends State<InputBar> {
   bool _isListening = false;
   bool _speechEnabled = false;
 
-  String _activeModelId = 'llama-3.3-70b-versatile';
+  String _activeModelId = '';
   bool _modelSwitching = false;
 
   String _ragMode = 'improved';  
@@ -80,7 +83,11 @@ class _InputBarState extends State<InputBar> {
     super.initState();
     widget.controller.addListener(_onTextChanged);
     _initSpeech();
+  }
+
+  void initializeAfterAuth() {
     _initRagMode();
+    _initActiveModel();
   }
 
   void _onTextChanged() {
@@ -97,8 +104,40 @@ class _InputBarState extends State<InputBar> {
     super.dispose();
   }
 
+  // lib/chats/inputbar.dart - UPDATE _initActiveModel
+
+  Future<void> _initActiveModel() async {
+    try {
+      // Cek apakah token tersedia sebelum request
+      final token = await TokenStorage.read(key: 'access_token');
+      if (token == null || token.isEmpty) {
+        debugPrint('⚠️ No token available, skipping active model fetch');
+        return;
+      }
+      
+      final modelId = await widget.onGetActiveModel();
+      if (modelId != null && mounted) {
+        setState(() => _activeModelId = modelId);
+      } else if (mounted) {
+        setState(() => _activeModelId = '');
+      }
+    } catch (e) {
+      debugPrint('Error loading active model: $e');
+      if (mounted) {
+        setState(() => _activeModelId = '');
+      }
+    }
+  }
+
   Future<void> _initRagMode() async {
     try {
+      // Cek apakah token tersedia sebelum request
+      final token = await TokenStorage.read(key: 'access_token');
+      if (token == null || token.isEmpty) {
+        debugPrint('⚠️ No token available, skipping RAG mode fetch');
+        return;
+      }
+      
       final mode = await widget.onGetRagMode();
       if (mounted) {
         setState(() => _ragMode = mode);
@@ -1455,9 +1494,12 @@ class _MobileInputLayout extends StatelessWidget {
   final VoidCallback onClearImage;
 
   String _getModelShortName(String modelId) {
+    if (modelId.isEmpty) return 'Loading...';
     if (modelId.contains('mistral')) return 'Mistral';
     if (modelId.contains('qwen')) return 'Qwen';
-    return 'Llama';
+    if (modelId.contains('gpt-oss')) return 'GPT OSS';
+    if (modelId.contains('llama')) return 'Llama';
+    return modelId.split('/').last.split('-').first;
   }
 
   String _getRagModeShortName(String mode) {
@@ -1466,6 +1508,22 @@ class _MobileInputLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (activeModelId.isEmpty) {
+    return const SizedBox(
+      height: 56,
+      child: Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Color(0xFF16DB65),
+          ),
+        ),
+      ),
+    );
+  }
+
     final isSendDisabled = sending || (!hasText && selectedImageBytes == null) || modelSwitching;
 
     return Column(
@@ -1876,7 +1934,7 @@ class _MobileInputLayout extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _DesktopInputLayout extends StatelessWidget {
-  const _DesktopInputLayout({
+   const _DesktopInputLayout({
     required this.hasText,
     required this.sending,
     required this.hasPending,
@@ -1927,14 +1985,33 @@ class _DesktopInputLayout extends StatelessWidget {
   }
 
   String _getModelShortName(String modelId) {
+    if (modelId.isEmpty) return 'Loading...';
     if (modelId.contains('mistral')) return 'Mistral';
     if (modelId.contains('qwen')) return 'Qwen';
-    return 'Llama';
+    if (modelId.contains('gpt-oss')) return 'GPT OSS';
+    if (modelId.contains('llama')) return 'Llama';
+    return modelId.split('/').last.split('-').first;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isSendDisabled = sending || (!hasText && selectedImageBytes == null) || modelSwitching;
+    if (activeModelId.isEmpty) {
+      return const SizedBox(
+        height: 56,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFF16DB65),
+            ),
+          ),
+        ),
+      );
+    }
+
+   final isSendDisabled = sending || (!hasText && selectedImageBytes == null) || modelSwitching;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

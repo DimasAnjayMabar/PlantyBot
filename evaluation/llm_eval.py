@@ -13,7 +13,7 @@ from dataclasses import dataclass, asdict
 from collections import defaultdict
 import re
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import CONFIG
+from config import CONFIG, GROQ_ALLOWED_MODELS, GROQ_MODEL_TPM_LIMITS
 
 @dataclass
 class ThroughputMetrics:
@@ -49,18 +49,42 @@ class LLMEvaluator:
     # Data throughput official Groq untuk Llama 3.3 70B
     # Sumber: https://console.groq.com/docs/models
     OFFICIAL_THROUGHPUT = {
-        "qwen3-32b": {"tokens_per_second": 400.0, "source": "https://console.groq.com/docs/models"},
-        "gpt-oss-20b": {"tokens_per_second": 1000.0, "source": "https://console.groq.com/docs/models"},
+        # Model Groq terbaru (2026)
+        "qwen/qwen3.6-27b": {"tokens_per_second": 500.0, "source": "https://console.groq.com/docs/models"},
+        "openai/gpt-oss-20b": {"tokens_per_second": 1000.0, "source": "https://console.groq.com/docs/models"},
+        "openai/gpt-oss-safeguard-20b": {"tokens_per_second": 1000.0, "source": "https://console.groq.com/docs/models"},
         "llama-3.1-8b-instant": {"tokens_per_second": 560.0, "source": "https://console.groq.com/docs/models"},
         "llama-3.3-70b-versatile": {"tokens_per_second": 280.0, "source": "https://console.groq.com/docs/models"},
-        "llama-4-scout-17b-16e": {"tokens_per_second": 750.0, "source": "https://console.groq.com/docs/models"},
-        "gpt-oss-120b": {"tokens_per_second": 500.0, "source": "https://console.groq.com/docs/models"},
-
+        "openai/gpt-oss-120b": {"tokens_per_second": 500.0, "source": "https://console.groq.com/docs/models"},
     }
-    
+        
     def __init__(self, rag_pipeline):
         self.pipeline = rag_pipeline
         self.models = rag_pipeline.models
+        self._build_throughput_map()
+
+    def _build_throughput_map(self):
+        """Bangun throughput map dari config.py"""
+        # Mapping throughput dari config atau source eksternal
+        # Bisa juga ambil dari MODEL_METADATA yang sama dengan backend
+        
+        # Source: https://console.groq.com/docs/models
+        THROUGHPUT_SOURCE = {
+            "llama-3.1-8b-instant": 560,
+            "llama-3.3-70b-versatile": 280,
+            "openai/gpt-oss-20b": 1000,
+            "openai/gpt-oss-safeguard-20b": 1000,
+            "qwen/qwen3.6-27b": 500,
+            "openai/gpt-oss-120b": 500,
+        }
+        
+        self.OFFICIAL_THROUGHPUT = {}
+        for model_id in GROQ_ALLOWED_MODELS:
+            tps = THROUGHPUT_SOURCE.get(model_id, 100)  # default 100
+            self.OFFICIAL_THROUGHPUT[model_id] = {
+                "tokens_per_second": tps,
+                "source": "https://console.groq.com/docs/models"
+            }
         
     def evaluate_throughput(self) -> Dict:
         """
@@ -74,7 +98,11 @@ class LLMEvaluator:
         # Lakukan pencarian yang lebih fleksibel (partial match)
         matched_key = None
         for key in self.OFFICIAL_THROUGHPUT.keys():
-            if key in clean_model_name or clean_model_name in key:
+            # Coba match dengan full name dulu, lalu partial
+            if key == model_name or key == clean_model_name:
+                matched_key = key
+                break
+            elif key in clean_model_name or clean_model_name in key:
                 matched_key = key
                 break
                 
@@ -447,12 +475,12 @@ class LLMEvaluator:
             
             # Compliance
             compliance = metrics.get("compliance")
-            comp_score = compliance.overall_score if compliance else 0
+            comp_score = compliance.get("overall_score", 0) if compliance else 0
             compliance_values.append(comp_score)
             
             # Conciseness
             conciseness = metrics.get("conciseness", [])
-            conc_score = np.mean([c.score for c in conciseness]) if conciseness else 0
+            conc_score = np.mean([c.get("score", 0) for c in conciseness]) if conciseness else 0
             conciseness_values.append(conc_score)
         
         if not model_names:

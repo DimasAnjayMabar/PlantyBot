@@ -295,11 +295,32 @@ class ChatService {
         await ModelPreferenceStorage.saveSelectedModel(modelId);
         await ModelPreferenceStorage.saveSelectedMode(mode);
         onModelChanged?.call(modelId);
+      } else {
+        // ❌ HAPUS hardcode - ambil dari backend atau tetap null
+        // Jangan set default di sini, biarkan null
+        _currentModelId = null;
+        _currentMode = null;
+        debugPrint('⚠️ Failed to sync model from backend');
       }
     } catch (e) {
-      _currentModelId = 'llama-3.3-70b-versatile';
-      _currentMode = 'groq';
+      // ❌ HAPUS hardcode
+      _currentModelId = null;
+      _currentMode = null;
+      debugPrint('⚠️ Error syncing model: $e');
     }
+  }
+
+  Future<String?> refreshCurrentModel() async {
+    final active = await getActiveModelFromBackend();
+    if (active != null) {
+      _currentModelId = active['model_id'] as String;
+      _currentMode = active['mode'] as String;
+      await ModelPreferenceStorage.saveSelectedModel(_currentModelId!);
+      await ModelPreferenceStorage.saveSelectedMode(_currentMode!);
+      onModelChanged?.call(_currentModelId);
+      return _currentModelId;
+    }
+    return null;
   }
 
   Future<bool> _setModelInternal(String mode, {String? path}) async {

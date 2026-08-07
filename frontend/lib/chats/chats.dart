@@ -84,6 +84,8 @@ class _ChatsPageState extends State<ChatsPage>
   bool _questionNavOpen = false;
   final Map<int, GlobalKey> _messageKeys = {};
 
+  final GlobalKey _inputBarKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -144,6 +146,15 @@ class _ChatsPageState extends State<ChatsPage>
 
     await Future.wait([_fetchTopics(), _fetchProfile()]);
     _pickGreeting();
+    
+    // ✅ Panggil inisialisasi InputBar setelah auth selesai
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final inputBar = _inputBarKey.currentWidget as InputBar?;
+      if (inputBar != null) {
+        // Call method via state
+        (_inputBarKey.currentState as dynamic)?.initializeAfterAuth();
+      }
+    });
   }
 
   void _handleForceLogout() {
@@ -643,6 +654,7 @@ class _ChatsPageState extends State<ChatsPage>
         ),
         Expanded(child: _buildBody()),
         InputBar(
+          key: _inputBarKey,  // ✅ Tambahkan key
           controller: _inputCtrl,
           focusNode: _inputFocus,
           sending: _sending,
@@ -655,10 +667,9 @@ class _ChatsPageState extends State<ChatsPage>
           onGetModels: () => _chatService.getLocalModels(),
           onGetRagMode: () => _chatService.getRagMode(),
           onSetRagMode: (mode) => _chatService.setRagMode(mode),
+          onGetActiveModel: () => _chatService.getCurrentModel(),
           pendingDetailId: pendingDetailId,
-          onStop: pendingDetailId != null
-              ? () => _stopGeneration(pendingDetailId)
-              : null,
+          onStop: pendingDetailId != null ? () => _stopGeneration(pendingDetailId) : null,
         ),
       ],
     );

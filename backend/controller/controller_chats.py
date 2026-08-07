@@ -1,3 +1,5 @@
+# controller_chats.py - UPDATE LANGSUNG
+
 import asyncio
 import json
 import logging
@@ -5,6 +7,10 @@ import io
 from gtts import gTTS
 import os
 import base64
+import sys  # <-- TAMBAHKAN
+
+# Tambahkan path ke root project untuk import config
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form, status
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -19,6 +25,9 @@ from validation.chats import (
     SendMessageSchema,
     EditMessageSchema,
 )
+
+# ── IMPORT CONFIG ──────────────────────────────────────────────────────────────
+from config import CONFIG, GROQ_ALLOWED_MODELS, GROQ_MODEL_TPM_LIMITS
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Chats"])
@@ -67,6 +76,81 @@ def _sse_event(event: str, data: dict) -> str:
 
 def _sse_heartbeat() -> str:
     return ": heartbeat\n\n"
+
+
+# =============================================================================
+# HELPER — Model Metadata (dinamis dari config.py)
+# =============================================================================
+
+def _get_model_metadata() -> dict:
+    """
+    Bangun metadata model dari GROQ_ALLOWED_MODELS di config.py.
+    Ini adalah source of truth untuk semua model.
+    """
+    # TPS dari official Groq docs
+    # Source: https://console.groq.com/docs/models
+    TPS_MAP = {
+        "llama-3.1-8b-instant": 560,
+        "llama-3.3-70b-versatile": 280,
+        "openai/gpt-oss-20b": 1000,
+        "openai/gpt-oss-safeguard-20b": 1000,
+        "qwen/qwen3.6-27b": 500,
+        "openai/gpt-oss-120b": 500,
+    }
+    
+    # Metadata lengkap per model
+    METADATA = {
+        "llama-3.1-8b-instant": {
+            "name": "Llama 3.1 · 8B",
+            "provider": "Meta via Groq",
+            "tier": "small",
+            "description": "Tercepat (560 t/s). Cocok untuk pertanyaan sederhana dan cepat.",
+        },
+        "llama-3.3-70b-versatile": {
+            "name": "Llama 3.3 · 70B",
+            "provider": "Meta via Groq",
+            "tier": "large",
+            "description": "Model terbaik untuk jawaban kompleks (280 t/s). Rekomendasi utama.",
+        },
+        "openai/gpt-oss-20b": {
+            "name": "GPT OSS · 20B",
+            "provider": "OpenAI via Groq",
+            "tier": "medium",
+            "description": "Open-weight OpenAI, sangat cepat (1000 t/s). Reasoning baik.",
+        },
+        "openai/gpt-oss-safeguard-20b": {
+            "name": "GPT OSS Safeguard · 20B",
+            "provider": "OpenAI via Groq",
+            "tier": "medium",
+            "description": "Versi safeguard dari GPT-OSS 20B (1000 t/s). [Preview]",
+        },
+        "qwen/qwen3.6-27b": {
+            "name": "Qwen 3.6 · 27B",
+            "provider": "Alibaba via Groq",
+            "tier": "large",
+            "description": "Model reasoning terbaru (500 t/s). [Preview]",
+        },
+        "openai/gpt-oss-120b": {
+            "name": "GPT OSS · 120B",
+            "provider": "OpenAI via Groq",
+            "tier": "large",
+            "description": "Open-weight OpenAI terbesar (500 t/s).",
+        },
+    }
+    
+    models = []
+    for model_id in sorted(GROQ_ALLOWED_MODELS):
+        meta = METADATA.get(model_id, {})
+        models.append({
+            "id": model_id,
+            "name": meta.get("name", model_id.split('/')[-1].replace('-', ' ').title()),
+            "provider": meta.get("provider", "Groq"),
+            "tier": meta.get("tier", "medium"),
+            "description": meta.get("description", f"Model {model_id}"),
+            "tps": TPS_MAP.get(model_id, 100),
+            "tpm_limit": GROQ_MODEL_TPM_LIMITS.get(model_id, 6000),
+        })
+    return models
 
 
 # =============================================================================
@@ -168,7 +252,7 @@ def rename_topic(
 # CHAT MESSAGES
 # =============================================================================
 
-@router.post("/chat/send", status_code=status.HTTP_202_ACCEPTED) # Atau sesuaikan nama endpoint awal Anda
+@router.post("/chat/send", status_code=status.HTTP_202_ACCEPTED)
 async def send_message(
     request: Request,
     db: Session = Depends(get_db),
@@ -205,14 +289,13 @@ async def send_message(
         chat_id = body.get("chat_id")
         
     try:
-        # Kirimkan semuanya ke satu service
         detail = ChatService.send_message(
             db=db,
             user_id=current_session.user_id,
             chat_id=chat_id,
             question=question,
             db_factory=SessionLocal,
-            base64_image=base64_image # Gambar diteruskan jika ada
+            base64_image=base64_image
         )
         
         return JSONResponse(
@@ -228,6 +311,7 @@ async def send_message(
     except Exception as e:
         logger.error(f"POST /chat/send error → {e}")
         raise HTTPException(status_code=500, detail="Terjadi kesalahan saat mengirim pesan.")
+
 
 @router.get("/chat/message/{detail_id}", status_code=status.HTTP_200_OK)
 def get_message(
@@ -258,6 +342,7 @@ def get_message(
         logger.error(f"GET /chat/message/{detail_id} error → {e}")
         raise HTTPException(status_code=500, detail="Terjadi kesalahan saat mengambil pesan.")
 
+
 @router.get("/chat/message/{detail_id}/tts", status_code=status.HTTP_200_OK)
 def get_tts_audio(
     detail_id: int,
@@ -266,25 +351,19 @@ def get_tts_audio(
 ):
     """
     Mengubah teks jawaban AI (response) menjadi audio (Text-to-Speech).
-    Frontend bisa menggunakan endpoint ini langsung di dalam tag <audio src="..."> 
-    atau memanggilnya saat tombol TTS ditekan.
     """
     try:
-        # 1. Ambil detail pesan dari database
         detail = ChatService.get_detail(db, current_session.user_id, detail_id)
         
         if not detail.response:
             raise HTTPException(status_code=400, detail="Belum ada jawaban dari AI untuk diubah menjadi suara.")
 
-        # 2. Generate Audio menggunakan gTTS (dengan bahasa Indonesia 'id')
         tts = gTTS(text=detail.response, lang='id', slow=False)
         
-        # 3. Simpan audio ke dalam buffer memori (agar tidak perlu simpan file fisik di server)
         audio_io = io.BytesIO()
         tts.write_to_fp(audio_io)
         audio_io.seek(0)
 
-        # 4. Stream audio kembali ke frontend
         return StreamingResponse(
             audio_io,
             media_type="audio/mpeg",
@@ -298,8 +377,8 @@ def get_tts_audio(
     except Exception as e:
         logger.error(f"GET /chat/message/{detail_id}/tts error → {e}")
         raise HTTPException(status_code=500, detail="Terjadi kesalahan saat men-generate audio TTS.")
-    
-# Perbaiki bagian akhir stream_response
+
+
 @router.get("/chat/stream/{detail_id}")
 async def stream_response(
     detail_id: int,
@@ -313,11 +392,10 @@ async def stream_response(
         raise e
 
     async def event_stream():
-        # Cek status awal
-        if detail.processing_status in ("done", "failed", "stopped"):   # ← tambah "stopped"
+        if detail.processing_status in ("done", "failed", "stopped"):
             event_type = (
                 "done"    if detail.processing_status == "done"
-                else "stopped" if detail.processing_status == "stopped"  # ← baru
+                else "stopped" if detail.processing_status == "stopped"
                 else "error"
             )
             yield _sse_event(event_type, {
@@ -343,7 +421,7 @@ async def stream_response(
                         asyncio.shield(done_event.wait()),
                         timeout=_SSE_HEARTBEAT_SECONDS,
                     )
-                    logger.info(f"Event triggered for detail_id={detail_id}")  # ✅ Tambah log
+                    logger.info(f"Event triggered for detail_id={detail_id}")
                     break
                 except asyncio.TimeoutError:
                     elapsed += _SSE_HEARTBEAT_SECONDS
@@ -374,18 +452,17 @@ async def stream_response(
             _cleanup_event(detail_id)
             return
 
-        # ✅ Pastikan mengambil status terbaru dari DB
         fresh_db = SessionLocal()
         try:
             fresh_detail = fresh_db.query(ChatDetail).filter_by(id=detail_id).first()
             final_status = fresh_detail.processing_status if fresh_detail else "failed"
-            event_type   = (
+            event_type = (
                 "done"    if final_status == "done"
-                else "stopped" if final_status == "stopped"   # ← baru
+                else "stopped" if final_status == "stopped"
                 else "error"
             )
             
-            logger.info(f"Sending {event_type} event for detail_id={detail_id}")  # ✅ Log
+            logger.info(f"Sending {event_type} event for detail_id={detail_id}")
             yield _sse_event(event_type, {
                 "detail_id": detail_id,
                 "processing_status": final_status,
@@ -474,7 +551,8 @@ def regenerate_response(
     except Exception as e:
         logger.error(f"POST /chat/regenerate/{detail_id} error → {e}")
         raise HTTPException(status_code=500, detail="Terjadi kesalahan saat regenerate jawaban.")
-    
+
+
 @router.post("/chat/stop/{detail_id}", status_code=status.HTTP_200_OK)
 def stop_generation(
     detail_id: int,
@@ -513,32 +591,28 @@ async def upload_knowledge_pdf(
     penulis: str | None = Form(default=None),
     tahun: str | None = Form(default=None),
     embedder_type: str = Form(default="improved"),
-    db: Session = Depends(get_db),  # ← tambahkan db
+    db: Session = Depends(get_db),
     current_session: UserAuth = Depends(get_current_session),
 ):
-    # ── Validasi embedder_type ────────────────────────────────────────────────
     if embedder_type not in ("improved", "raw"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Parameter 'embedder_type' harus 'improved' atau 'raw'.",
         )
 
-    # ── Validasi tipe MIME ────────────────────────────────────────────────────
     if file.content_type not in ("application/pdf", "application/octet-stream"):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="Hanya file PDF yang diperbolehkan.",
         )
 
-    # ── Validasi ekstensi sebagai fallback ────────────────────────────────────
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="Ekstensi file harus .pdf",
         )
 
-    # ── Baca bytes (maks 50 MB) ───────────────────────────────────────────────
-    MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+    MAX_SIZE = 50 * 1024 * 1024
     file_bytes = await file.read()
     if len(file_bytes) > MAX_SIZE:
         raise HTTPException(
@@ -579,8 +653,9 @@ async def upload_knowledge_pdf(
             detail="Terjadi kesalahan saat memproses file PDF.",
         )
 
+
 # =============================================================================
-# MODEL MANAGEMENT
+# MODEL MANAGEMENT — DINAMIS DARI CONFIG.PY
 # =============================================================================
 
 @router.get("/models", status_code=status.HTTP_200_OK)
@@ -588,48 +663,9 @@ def get_available_models(
     current_session: UserAuth = Depends(get_current_session),
 ):
     """
-    Daftar model Groq yang tersedia beserta info kapasitas dan tier.
+    Daftar model Groq yang tersedia — diambil dari config.py secara dinamis.
     """
-    from config import CONFIG
-
-    GROQ_MODELS = [
-        {
-            "id":          "llama-3.1-8b-instant",
-            "name":        "Llama 3.1 · 8B",
-            "provider":    "Meta via Groq",
-            "tier":        "small",
-            "description": "Tercepat (560 t/s). Cocok untuk pertanyaan sederhana dan cepat.",
-        },
-        {
-            "id":          "meta-llama/llama-4-scout-17b-16e-instruct",
-            "name":        "Llama 4 Scout · 17B",
-            "provider":    "Meta via Groq",
-            "tier":        "medium",
-            "description": "Model MoE terbaru Meta (750 t/s). Efisien dan mendukung gambar. [Preview]",
-        },
-        {
-            "id":          "openai/gpt-oss-20b",
-            "name":        "GPT OSS · 20B",
-            "provider":    "OpenAI via Groq",
-            "tier":        "medium",
-            "description": "Model open-weight OpenAI, sangat cepat (1000 t/s). Reasoning baik.",
-        },
-        {
-            "id":          "qwen/qwen3-32b",
-            "name":        "Qwen3 · 32B",
-            "provider":    "Alibaba via Groq",
-            "tier":        "large",
-            "description": "Reasoning kuat dari Qwen3 (400 t/s). Unggul untuk analisis bertahap. [Preview]",
-        },
-        {
-            "id":          "llama-3.3-70b-versatile",
-            "name":        "Llama 3.3 · 70B",
-            "provider":    "Meta via Groq",
-            "tier":        "large",
-            "description": "Model terbaik untuk jawaban kompleks (280 t/s). Rekomendasi utama.",
-        },
-    ]
-
+    models = _get_model_metadata()
     active_model = CONFIG.get("groq_model", "llama-3.3-70b-versatile")
 
     return JSONResponse(
@@ -637,10 +673,11 @@ def get_available_models(
         content={
             "success": True,
             "message": "Daftar model berhasil diambil.",
-            "models":  GROQ_MODELS,
-            "active":  active_model,
+            "models": models,
+            "active": active_model,
         },
     )
+
 
 @router.post("/models/set-model", status_code=status.HTTP_200_OK)
 async def set_active_model(
@@ -650,7 +687,7 @@ async def set_active_model(
     import json
 
     try:
-        body     = await request.json()
+        body = await request.json()
         model_id = body.get("model_id", "").strip()
 
         if not model_id:
@@ -659,32 +696,21 @@ async def set_active_model(
                 detail="Field 'model_id' wajib diisi.",
             )
 
-        # Daftar model Groq yang diizinkan
-        ALLOWED_MODELS = {
-            "llama-3.1-8b-instant",
-            "llama-3.3-70b-versatile",
-            "openai/gpt-oss-20b",
-            "qwen/qwen3-32b",
-            "meta-llama/llama-4-scout-17b-16e-instruct",
-        }
-
-        if model_id not in ALLOWED_MODELS:
+        # Cek apakah model diizinkan — dari GROQ_ALLOWED_MODELS di config.py
+        if model_id not in GROQ_ALLOWED_MODELS:
+            allowed = ", ".join(sorted(GROQ_ALLOWED_MODELS))
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Model '{model_id}' tidak dikenali. "
-                       f"Gunakan salah satu dari: {', '.join(sorted(ALLOWED_MODELS))}",
+                detail=f"Model '{model_id}' tidak dikenali. Gunakan salah satu dari: {allowed}",
             )
 
-        # Update CONFIG sebelum reload pipeline
-        from config import CONFIG
+        # Update CONFIG
         CONFIG["groq_model"] = model_id
 
         from pipeline import reload_with_model
         reload_with_model("groq")
 
-        logger.info(
-            f"Groq model switched → model={model_id}  user_id={current_session.user_id}"
-        )
+        logger.info(f"Groq model switched → model={model_id}  user_id={current_session.user_id}")
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -692,7 +718,7 @@ async def set_active_model(
                 "success": True,
                 "message": f"Berhasil beralih ke model {model_id}.",
                 "data": {
-                    "mode":     "groq",
+                    "mode": "groq",
                     "model_id": model_id,
                 },
             },
@@ -712,6 +738,7 @@ async def set_active_model(
             detail=f"Gagal mengganti model: {str(e)}",
         )
 
+
 @router.get("/models/active", status_code=status.HTTP_200_OK)
 def get_active_model(
     current_session: UserAuth = Depends(get_current_session),
@@ -720,8 +747,6 @@ def get_active_model(
     Mendapatkan model Groq yang sedang aktif beserta mode-nya.
     Endpoint ini digunakan oleh Flutter untuk sinkronisasi state setelah hot reload.
     """
-    from config import CONFIG
-    
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
@@ -734,7 +759,6 @@ def get_active_model(
         },
     )
 
-# controller_chats.py - tambah setelah endpoint model management
 
 # =============================================================================
 # RAG MODE MANAGEMENT
@@ -747,8 +771,6 @@ def get_rag_mode(
     """
     Mendapatkan mode RAG yang sedang aktif ('improved' atau 'regular').
     """
-    from config import CONFIG
-    
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
@@ -784,16 +806,9 @@ async def set_rag_mode(
                 detail="Parameter 'mode' harus 'improved' atau 'regular'.",
             )
         
-        from config import CONFIG
-        
         CONFIG["rag_mode"] = mode
         
-        logger.info(
-            f"RAG mode switched → mode={mode}  user_id={current_session.user_id}"
-        )
-        
-        # Tidak perlu reload pipeline karena hanya mode retrieval yang berubah
-        # Pipeline masih menggunakan model yang sama
+        logger.info(f"RAG mode switched → mode={mode}  user_id={current_session.user_id}")
         
         return JSONResponse(
             status_code=status.HTTP_200_OK,

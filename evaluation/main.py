@@ -28,7 +28,8 @@ logger = logging.getLogger("ragna")
 EVAL_DIR = os.path.dirname(os.path.abspath(__file__))  # folder /evaluation
 SAVE_DATA_DIR = os.path.join(EVAL_DIR, "save_data")
 
-
+import matplotlib
+matplotlib.use('Agg')
 
 # ── Rate-limit helper ─────────────────────────────────────────────────────────
 class TPDLimitExceeded(Exception):
@@ -379,6 +380,10 @@ class RAGEvaluationPipeline:
             logger.warning("No compliance tests found")
             return {}
 
+        llm_prompts = self.test_dataset.get("llm_prompts", [])
+        if not llm_prompts:
+            logger.warning("No llm_prompts found — conciseness evaluation will be skipped")
+
         checkpoint_dir = os.path.join(SAVE_DATA_DIR, "llm")
         os.makedirs(checkpoint_dir, exist_ok=True)
         checkpoint_path = os.path.join(checkpoint_dir, "_checkpoint_llm_results.json")
@@ -402,6 +407,7 @@ class RAGEvaluationPipeline:
             logger.info(f"\n--- Evaluating model: {model_id} ---")
             try:
                 from config import set_groq_model
+                from dataclasses import asdict
                 set_groq_model(model_id)
 
                 throughput = self.llm_eval.evaluate_throughput()
@@ -417,24 +423,44 @@ class RAGEvaluationPipeline:
                         logger.error(f"Compliance evaluation for {model_id} failed: {e}")
                         compliance = None
 
+                # ── Conciseness — generate jawaban ASLI dari llm_prompts, ──────
+                # ── bukan mengevaluasi gold_answer yang ditulis manual ─────────
                 conciseness = []
-                if self.test_dataset and self.test_dataset.get("rag_queries"):
-                    test_responses = [
-                        {"question": q.get("question", ""), "answer": q.get("gold_answer", "")}
-                        for q in self.test_dataset.get("rag_queries", [])[:10]
-                        if q.get("gold_answer")
-                    ]
+                if llm_prompts:
+                    test_responses = []
+                    for prompt in llm_prompts:
+                        try:
+                            def _generate_for_prompt():
+                                resp = self.rag_eval.models.groq_client.chat.completions.create(
+                                    model=CONFIG["groq_model"],
+                                    messages=[{"role": "user", "content": prompt}],
+                                    max_tokens=512,
+                                    temperature=0.2,
+                                )
+                                return resp.choices[0].message.content
+
+                            answer = _call_with_rate_limit_retry(_generate_for_prompt, max_retries=2)
+                            test_responses.append({"question": prompt, "answer": answer})
+                        except Exception as e:
+                            logger.error(f"  Conciseness generation gagal untuk prompt '{prompt[:40]}...': {e}")
+                            continue
+
                     if test_responses:
                         conciseness = self.llm_eval.evaluate_conciseness(test_responses)
 
+                # ── FIX: konversi dataclass -> dict SEBELUM disimpan ke JSON ───
+                # (dataclass mentah gagal di-serialize dengan benar, jatuh ke
+                # str() lewat default=str dan tidak bisa dibaca ulang saat resume)
+                compliance_dict = asdict(compliance) if compliance else None
+                conciseness_list = [asdict(c) for c in conciseness] if conciseness else []
+
                 results[model_id] = {
                     "throughput": throughput,
-                    "compliance": compliance,
-                    "conciseness": conciseness
+                    "compliance": compliance_dict,
+                    "conciseness": conciseness_list
                 }
                 logger.info(f"✓ {model_id} evaluation complete")
 
-                # Simpan checkpoint tiap model selesai
                 with open(checkpoint_path, 'w', encoding='utf-8') as f:
                     json.dump(results, f, indent=2, ensure_ascii=False, default=str)
 
@@ -637,8 +663,9 @@ class RAGEvaluationPipeline:
             print(f"     Response Time: {speed.get('total', {}).get('mean', 0):.2f}s")
         
         # LLM all models summary
+        # LLM all models summary
         llm = results.get("llm", {})
-        
+
         print(f"\n🧠 LLM (All Models):")
         for model_name, model_results in llm.items():
             if "error" in model_results:
@@ -650,8 +677,12 @@ class RAGEvaluationPipeline:
             conciseness = model_results.get("conciseness", [])
             
             tps = throughput.get("overall_prompts", {}).get("mean_tps", 0) if throughput else 0
-            comp_score = compliance.overall_score if compliance else 0
-            conc_score = np.mean([c.score for c in conciseness]) if conciseness else 0
+            
+            # FIX: compliance sekarang adalah dict, bukan dataclass
+            comp_score = compliance.get("overall_score", 0) if compliance else 0
+            
+            # FIX: conciseness adalah list of dict, bukan dataclass
+            conc_score = np.mean([c.get("score", 0) for c in conciseness]) if conciseness else 0
             
             status = "✅" if comp_score > 0.7 else "⚠️"
             print(f"   {model_name[:30]}: TPS={tps:.0f} | Comp={comp_score:.2f} | Conc={conc_score:.2f} {status}")

@@ -85,17 +85,17 @@ GROQ_ALLOWED_MODELS = {
     "llama-3.3-70b-versatile",
     "openai/gpt-oss-20b",
     "openai/gpt-oss-120b",
-    "qwen/qwen3-32b",
-    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "openai/gpt-oss-safeguard-20b",     # Pengganti llama-4-scout
+    "qwen/qwen3.6-27b",                  # Pengganti qwen/qwen3-32b
 }
 
 GROQ_MODEL_TPM_LIMITS = {
     "llama-3.1-8b-instant":                        6_000,
-    "meta-llama/llama-4-scout-17b-16e-instruct":   6_000,
     "openai/gpt-oss-20b":                          6_000,
-    "qwen/qwen3-32b":                              6_000,
+    "openai/gpt-oss-safeguard-20b":                6_000,   # Pengganti llama-4-scout
+    "qwen/qwen3.6-27b":                            6_000,   # Pengganti qwen/qwen3-32b
     "llama-3.3-70b-versatile":                     300_000,
-    "openai/gpt-oss-120b":                         6_000,   # ← tambah; sesuaikan jika berbeda
+    "openai/gpt-oss-120b":                         6_000,
 }
 
 GROQ_MODEL_SAFE_TOKEN_BUDGET = {
@@ -154,13 +154,6 @@ def list_local_models(model_dir: str = None) -> list:
             "description": "Tercepat (560 t/s). Tidak cocok untuk RAG — TPM limit 6K di free tier.",
         },
         {
-            "id":          "meta-llama/llama-4-scout-17b-16e-instruct",
-            "name":        "Llama 4 Scout · 17B",
-            "provider":    "Meta via Groq",
-            "tier":        "medium",
-            "description": "Model MoE terbaru Meta (750 t/s). [Preview]",
-        },
-        {
             "id":          "openai/gpt-oss-20b",
             "name":        "GPT OSS · 20B",
             "provider":    "OpenAI via Groq",
@@ -168,11 +161,18 @@ def list_local_models(model_dir: str = None) -> list:
             "description": "Open-weight OpenAI, sangat cepat (1000 t/s).",
         },
         {
-            "id":          "qwen/qwen3-32b",
-            "name":        "Qwen3 · 32B",
+            "id":          "openai/gpt-oss-safeguard-20b",
+            "name":        "GPT OSS Safeguard · 20B",
+            "provider":    "OpenAI via Groq",
+            "tier":        "medium",
+            "description": "Versi safeguard dari GPT-OSS 20B (1000 t/s). [Preview]",
+        },
+        {
+            "id":          "qwen/qwen3.6-27b",
+            "name":        "Qwen 3.6 · 27B",
             "provider":    "Alibaba via Groq",
             "tier":        "large",
-            "description": "Reasoning kuat (400 t/s). [Preview]",
+            "description": "Model reasoning terbaru (500 t/s). [Preview]",
         },
         {
             "id":          "llama-3.3-70b-versatile",
@@ -180,6 +180,13 @@ def list_local_models(model_dir: str = None) -> list:
             "provider":    "Meta via Groq",
             "tier":        "large",
             "description": "Rekomendasi utama. 300K TPM — aman untuk semua fitur (280 t/s).",
+        },
+        {
+            "id":          "openai/gpt-oss-120b",
+            "name":        "GPT OSS · 120B",
+            "provider":    "OpenAI via Groq",
+            "tier":        "large",
+            "description": "Open-weight OpenAI terbesar (500 t/s).",
         },
     ]
 
